@@ -1,11 +1,6 @@
 [build]
   command = "npm run build"
   publish = ".output/public"
-  functions = ".output/server"
-
-[functions]
-  node_bundler = "esbuild"
-  directory = ".output/server"
 
 [[redirects]]
   from = "/*"

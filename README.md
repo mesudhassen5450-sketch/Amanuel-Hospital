@@ -4,6 +4,18 @@
 
 ---
 
+## 📸 Screenshots
+
+<div align="center">
+  <img src="scrren/aman.png" alt="Dr. Amanuel Hospital Homepage" width="100%" />
+  <p><em>Homepage with multilingual support and modern design</em></p>
+  
+  <img src="scrren/aman 2.png" alt="Dr. Amanuel Hospital Services Page" width="100%" />
+  <p><em>Services and features showcase</em></p>
+</div>
+
+---
+
 ## 📋 Description
 
 A modern, multilingual hospital website for **Dr. Amanuel Hospital** in Bishoftu, Ethiopia. The website provides comprehensive information about medical services, doctors, departments, and facilities with full support for three languages: English, Amharic (አማርኛ), and Afaan Oromo.

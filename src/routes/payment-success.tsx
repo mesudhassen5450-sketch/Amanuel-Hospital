@@ -48,7 +48,7 @@ function PaymentSuccessPage() {
 
     async function checkPayment() {
       try {
-        const result = await verifyChapaPayment({ txRef: tx_ref! });
+        const result = await verifyChapaPayment({ data: { txRef: tx_ref! } });
         
         if (!isMounted) return;
 

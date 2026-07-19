@@ -106,10 +106,12 @@ function BookingPage() {
         setLoading(true);
         try {
           const result = await initializeChapaPayment({
-            amount: 300,
-            fullName: form.fullName.trim(),
-            phoneNumber: form.phoneNumber.trim(),
-            origin: window.location.origin
+            data: {
+              amount: 300,
+              fullName: form.fullName.trim(),
+              phoneNumber: form.phoneNumber.trim(),
+              origin: window.location.origin
+            }
           });
 
           if (result.success && result.checkoutUrl) {

@@ -191,8 +191,12 @@ function BookingPage() {
                       )}
                       aria-invalid={!!errors.phoneNumber}
                     />
-                    {errors.phoneNumber && (
+                    {errors.phoneNumber ? (
                       <p className="text-xs text-destructive flex items-center gap-1 font-medium">{errors.phoneNumber}</p>
+                    ) : (
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 leading-relaxed">
+                        💡 To test successful payments on Chapa, enter <span className="font-semibold text-primary">0900123456</span>
+                      </p>
                     )}
                   </div>
                 </div>

@@ -15,6 +15,7 @@ import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/translations";
 import { cn } from "@/lib/utils";
 import { initializeChapaPayment } from "@/lib/chapa-server";
+import { addBookingServer } from "@/lib/admin-server";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -100,8 +101,26 @@ function BookingPage() {
       };
       
       if (selectedPayment === "Cash") {
-        setBooking(bookingData);
-        navigate({ to: "/payment-summary" });
+        setLoading(true);
+        try {
+          await addBookingServer({
+            data: {
+              fullName: bookingData.fullName,
+              phoneNumber: bookingData.phoneNumber,
+              appointmentDate: bookingData.appointmentDate,
+              appointmentTime: bookingData.appointmentTime,
+              paymentMethod: bookingData.paymentMethod,
+              amount: bookingData.amount,
+              status: bookingData.status
+            }
+          });
+          setBooking(bookingData);
+          navigate({ to: "/payment-summary" });
+        } catch (err: any) {
+          console.error("Failed to save booking to server:", err);
+          setSubmitError("Failed to save appointment. Please try again.");
+          setLoading(false);
+        }
       } else {
         setLoading(true);
         try {
@@ -191,12 +210,8 @@ function BookingPage() {
                       )}
                       aria-invalid={!!errors.phoneNumber}
                     />
-                    {errors.phoneNumber ? (
+                    {errors.phoneNumber && (
                       <p className="text-xs text-destructive flex items-center gap-1 font-medium">{errors.phoneNumber}</p>
-                    ) : (
-                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 leading-relaxed">
-                        💡 To test successful payments on Chapa, enter <span className="font-semibold text-primary">0900123456</span>
-                      </p>
                     )}
                   </div>
                 </div>

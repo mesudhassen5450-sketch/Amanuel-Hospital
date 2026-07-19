@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBooking } from "@/lib/booking-context";
 import { verifyChapaPayment } from "@/lib/chapa-server";
+import { addBookingServer } from "@/lib/admin-server";
 import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/translations";
 
@@ -56,30 +57,42 @@ function PaymentSuccessPage() {
           setVerified(true);
           setTxDetails(result.data);
           
-          // Update local booking state with verified information
-          if (booking) {
-            setBooking({
-              ...booking,
+          const activeBooking = booking || (() => {
+            try {
+              const stored = sessionStorage.getItem("temp_booking");
+              return stored ? JSON.parse(stored) : null;
+            } catch {
+              return null;
+            }
+          })();
+
+          if (activeBooking) {
+            const confirmedBooking = {
+              ...activeBooking,
               status: "Paid & Confirmed",
               paymentStatus: "success",
               txRef: tx_ref
-            });
-          } else {
-            // Attempt to recover booking from sessionStorage if state was lost
+            };
+
             try {
-              const stored = sessionStorage.getItem("temp_booking");
-              if (stored) {
-                const parsed = JSON.parse(stored);
-                setBooking({
-                  ...parsed,
-                  status: "Paid & Confirmed",
-                  paymentStatus: "success",
-                  txRef: tx_ref
-                });
-              }
-            } catch (e) {
-              console.error("Failed to restore booking during success redirection", e);
+              await addBookingServer({
+                data: {
+                  fullName: confirmedBooking.fullName,
+                  phoneNumber: confirmedBooking.phoneNumber,
+                  appointmentDate: confirmedBooking.appointmentDate,
+                  appointmentTime: confirmedBooking.appointmentTime,
+                  paymentMethod: confirmedBooking.paymentMethod,
+                  amount: confirmedBooking.amount,
+                  status: confirmedBooking.status,
+                  txRef: confirmedBooking.txRef,
+                  paymentStatus: confirmedBooking.paymentStatus
+                }
+              });
+            } catch (serverErr) {
+              console.error("Failed to save confirmed booking to server:", serverErr);
             }
+
+            setBooking(confirmedBooking);
           }
         } else {
           setError(result.message || "Failed to verify the transaction status.");

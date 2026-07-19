@@ -332,7 +332,7 @@ export function FloatingActions({ chatOpen, setChatOpen }: FloatingActionsProps)
 
       {/* ── Chat Trigger Button ─────────────────────────────────────────── */}
       <button
-        onClick={() => setChatOpen((v) => !v)}
+        onClick={() => setChatOpen(!chatOpen)}
         aria-label={chatOpen ? "Close AI assistant" : "Open AI assistant"}
         className="fixed bottom-6 right-4 z-50 grid h-14 w-14 place-items-center rounded-full bg-success text-success-foreground shadow-lg transition-transform hover:scale-110 animate-pulse-soft"
       >

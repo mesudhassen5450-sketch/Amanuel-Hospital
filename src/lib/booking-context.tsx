@@ -5,9 +5,11 @@ export interface BookingData {
   phoneNumber: string;
   appointmentDate: string;
   appointmentTime: string;
-  paymentMethod: "Telebirr" | "CBE Birr" | "Cash";
+  paymentMethod: "Telebirr" | "CBE Birr" | "Card / Other" | "Cash";
   amount: number;
-  status: "Waiting for Payment";
+  status: string;
+  txRef?: string;
+  paymentStatus?: string;
 }
 
 interface BookingContextValue {

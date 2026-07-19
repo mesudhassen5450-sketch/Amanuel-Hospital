@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as PaymentSummaryRouteImport } from './routes/payment-summary'
+import { Route as PaymentSuccessRouteImport } from './routes/payment-success'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as DoctorsRouteImport } from './routes/doctors'
 import { Route as DepartmentsRouteImport } from './routes/departments'
@@ -33,6 +34,11 @@ const ServicesRoute = ServicesRouteImport.update({
 const PaymentSummaryRoute = PaymentSummaryRouteImport.update({
   id: '/payment-summary',
   path: '/payment-summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentSuccessRoute = PaymentSuccessRouteImport.update({
+  id: '/payment-success',
+  path: '/payment-success',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GalleryRoute = GalleryRouteImport.update({
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/departments': typeof DepartmentsRoute
   '/doctors': typeof DoctorsRoute
   '/gallery': typeof GalleryRoute
+  '/payment-success': typeof PaymentSuccessRoute
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/departments': typeof DepartmentsRoute
   '/doctors': typeof DoctorsRoute
   '/gallery': typeof GalleryRoute
+  '/payment-success': typeof PaymentSuccessRoute
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/departments': typeof DepartmentsRoute
   '/doctors': typeof DoctorsRoute
   '/gallery': typeof GalleryRoute
+  '/payment-success': typeof PaymentSuccessRoute
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/departments'
     | '/doctors'
     | '/gallery'
+    | '/payment-success'
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/departments'
     | '/doctors'
     | '/gallery'
+    | '/payment-success'
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/departments'
     | '/doctors'
     | '/gallery'
+    | '/payment-success'
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   DepartmentsRoute: typeof DepartmentsRoute
   DoctorsRoute: typeof DoctorsRoute
   GalleryRoute: typeof GalleryRoute
+  PaymentSuccessRoute: typeof PaymentSuccessRoute
   PaymentSummaryRoute: typeof PaymentSummaryRoute
   ServicesRoute: typeof ServicesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/payment-summary'
       fullPath: '/payment-summary'
       preLoaderRoute: typeof PaymentSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment-success': {
+      id: '/payment-success'
+      path: '/payment-success'
+      fullPath: '/payment-success'
+      preLoaderRoute: typeof PaymentSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gallery': {
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   DepartmentsRoute: DepartmentsRoute,
   DoctorsRoute: DoctorsRoute,
   GalleryRoute: GalleryRoute,
+  PaymentSuccessRoute: PaymentSuccessRoute,
   PaymentSummaryRoute: PaymentSummaryRoute,
   ServicesRoute: ServicesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

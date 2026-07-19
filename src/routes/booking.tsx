@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, CreditCard, ArrowRight, Sparkles } from "lucide-react";
+import { CalendarIcon, Clock, CreditCard, ArrowRight, Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { PageHero } from "@/components/site/PageHero";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useBooking, type BookingData } from "@/lib/booking-context";
 import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/translations";
 import { cn } from "@/lib/utils";
+import { initializeChapaPayment } from "@/lib/chapa-server";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -31,8 +32,9 @@ const timeSlots = [
 ];
 
 const paymentMethods = [
-  { id: "Telebirr", name: "Telebirr", icon: "📱", desc: "Pay with Telebirr mobile wallet" },
-  { id: "CBE Birr", name: "CBE Birr", icon: "🏦", desc: "Pay via CBE Birr mobile money" },
+  { id: "Telebirr", name: "Telebirr", icon: "📱", desc: "Pay instantly via Telebirr (Chapa)" },
+  { id: "CBE Birr", name: "CBE Birr", icon: "🏦", desc: "Pay instantly via CBE Birr (Chapa)" },
+  { id: "Card / Other", name: "Card / Other Banks", icon: "💳", desc: "Pay via Debit/Credit Cards & other mobile banks (Chapa)" },
   { id: "Cash", name: "Cash", icon: "💵", desc: "Pay in cash at the hospital counter" }
 ] as const;
 
@@ -48,9 +50,11 @@ function BookingPage() {
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>("");
-  const [selectedPayment, setSelectedPayment] = useState<"Telebirr" | "CBE Birr" | "Cash" | "">("");
+  const [selectedPayment, setSelectedPayment] = useState<"Telebirr" | "CBE Birr" | "Card / Other" | "Cash" | "">("");
   
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -81,9 +85,10 @@ function BookingPage() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate() && selectedDate && selectedPayment) {
+      setSubmitError("");
       const bookingData: BookingData = {
         fullName: form.fullName.trim(),
         phoneNumber: form.phoneNumber.trim(),
@@ -91,11 +96,36 @@ function BookingPage() {
         appointmentTime: selectedTime,
         paymentMethod: selectedPayment,
         amount: 300,
-        status: "Waiting for Payment"
+        status: selectedPayment === "Cash" ? "Waiting for Payment" : "Pending Checkout"
       };
       
-      setBooking(bookingData);
-      navigate({ to: "/payment-summary" });
+      if (selectedPayment === "Cash") {
+        setBooking(bookingData);
+        navigate({ to: "/payment-summary" });
+      } else {
+        setLoading(true);
+        try {
+          const result = await initializeChapaPayment({
+            amount: 300,
+            fullName: form.fullName.trim(),
+            phoneNumber: form.phoneNumber.trim(),
+            origin: window.location.origin
+          });
+
+          if (result.success && result.checkoutUrl) {
+            bookingData.txRef = result.txRef;
+            setBooking(bookingData);
+            window.location.href = result.checkoutUrl;
+          } else {
+            setSubmitError(result.message || "Failed to initiate payment. Please try again.");
+            setLoading(false);
+          }
+        } catch (err: any) {
+          console.error("Payment initialization error:", err);
+          setSubmitError("An error occurred while connecting to Chapa. Please try again.");
+          setLoading(false);
+        }
+      }
     }
   };
 
@@ -129,6 +159,7 @@ function BookingPage() {
                     <Label htmlFor="book-name" className="text-foreground font-medium">Full Name</Label>
                     <Input
                       id="book-name"
+                      disabled={loading}
                       value={form.fullName}
                       onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                       placeholder="e.g. Abebe Kebede"
@@ -148,6 +179,7 @@ function BookingPage() {
                     <Input
                       id="book-phone"
                       type="tel"
+                      disabled={loading}
                       value={form.phoneNumber}
                       onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
                       placeholder="e.g. +251 911 223 344"
@@ -171,6 +203,7 @@ function BookingPage() {
                       <Button
                         type="button"
                         variant="outline"
+                        disabled={loading}
                         className={cn(
                           "w-full justify-start text-left font-normal h-11 rounded-xl border-input/60",
                           !selectedDate && "text-muted-foreground",
@@ -209,6 +242,7 @@ function BookingPage() {
                         <button
                           key={time}
                           type="button"
+                          disabled={loading}
                           onClick={() => setSelectedTime(time)}
                           className={cn(
                             "py-2 px-3 text-xs font-semibold rounded-xl border text-center transition-all cursor-pointer",
@@ -233,14 +267,15 @@ function BookingPage() {
                     <CreditCard className="h-4 w-4 text-primary" />
                     Payment Method
                   </Label>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {paymentMethods.map((pm) => {
                       const isSelected = selectedPayment === pm.id;
                       return (
                         <button
                           key={pm.id}
                           type="button"
-                          onClick={() => setSelectedPayment(pm.id)}
+                          disabled={loading}
+                          onClick={() => setSelectedPayment(pm.id as any)}
                           className={cn(
                             "flex flex-row items-center gap-3 p-4 rounded-2xl border text-left transition-all hover-lift cursor-pointer",
                             isSelected
@@ -265,13 +300,28 @@ function BookingPage() {
               </CardContent>
 
               <CardFooter className="flex flex-col items-stretch p-0 pt-4 border-t border-border/40">
+                {submitError && (
+                  <div className="mb-4 flex items-center gap-2 rounded-xl bg-destructive/10 p-3 text-xs font-medium text-destructive">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{submitError}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-4 text-sm font-semibold">
                   <span className="text-muted-foreground">Consultation Fee</span>
                   <span className="text-foreground text-lg">300 ETB</span>
                 </div>
-                <Button type="submit" className="w-full rounded-2xl h-12 text-sm font-semibold flex items-center justify-center gap-2 group shadow-md transition-all">
-                  Continue
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <Button type="submit" disabled={loading} className="w-full rounded-2xl h-12 text-sm font-semibold flex items-center justify-center gap-2 group shadow-md transition-all">
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Redirecting to Payment...
+                    </>
+                  ) : (
+                    <>
+                      {selectedPayment === "Cash" ? "Confirm Appointment" : "Continue to Pay"}
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
                 </Button>
               </CardFooter>
             </form>

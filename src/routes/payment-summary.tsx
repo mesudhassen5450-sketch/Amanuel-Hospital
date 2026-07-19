@@ -112,7 +112,7 @@ function PaymentSummaryPage() {
                   <div className="flex items-center justify-between p-4 rounded-2xl border border-border/40 bg-secondary/10">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-xl bg-primary/10 text-primary text-xl">
-                        {booking.paymentMethod === "Telebirr" ? "📱" : booking.paymentMethod === "CBE Birr" ? "🏦" : "💵"}
+                        {booking.paymentMethod === "Telebirr" ? "📱" : booking.paymentMethod === "CBE Birr" ? "🏦" : booking.paymentMethod === "Card / Other" ? "💳" : "💵"}
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-foreground">{booking.paymentMethod}</p>

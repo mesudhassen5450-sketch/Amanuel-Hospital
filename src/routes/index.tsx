@@ -4,7 +4,6 @@ import {
   ArrowRight, Star, Search, HeartPulse, Stethoscope, Pill, Ambulance,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { AppointmentDialog } from "@/components/site/AppointmentDialog";
 import { Reveal } from "@/components/site/Reveal";
 import { StatCounter } from "@/components/site/StatCounter";
 import { SectionHeading } from "@/components/site/SectionHeading";
@@ -87,11 +86,11 @@ function Hero() {
             {t(tr.subtitle, lang)}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <AppointmentDialog>
-              <Button size="lg" className="rounded-xl px-8 shadow-lg transition-transform active:scale-95">
+            <Button asChild size="lg" className="rounded-xl px-8 shadow-lg transition-transform active:scale-95">
+              <Link to="/booking">
                 {t(translations.nav.bookAppt, lang)}
-              </Button>
-            </AppointmentDialog>
+              </Link>
+            </Button>
             <Button asChild size="lg" variant="outline"
               className="rounded-xl border-primary-foreground/40 bg-transparent px-8 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
               <Link to="/services">
@@ -184,11 +183,11 @@ function DoctorsPreview() {
                     )}
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">{doc.experience}</p>
-                  <AppointmentDialog>
-                    <Button variant="outline" className="mt-4 w-full rounded-xl">
+                  <Button asChild variant="outline" className="mt-4 w-full rounded-xl">
+                    <Link to="/booking">
                       {t(docTr.bookAppt, lang)}
-                    </Button>
-                  </AppointmentDialog>
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </Reveal>
@@ -352,12 +351,12 @@ function CtaBand() {
               {t(tr.ctaSub, lang)}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <AppointmentDialog>
-                <Button size="lg" variant="secondary"
-                  className="rounded-xl px-8 transition-transform active:scale-95">
+              <Button asChild size="lg" variant="secondary"
+                className="rounded-xl px-8 transition-transform active:scale-95">
+                <Link to="/booking">
                   {t(translations.nav.bookAppt, lang)}
-                </Button>
-              </AppointmentDialog>
+                </Link>
+              </Button>
               <Button asChild size="lg" variant="outline"
                 className="rounded-xl border-primary-foreground/40 bg-transparent px-8 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
                 <Link to="/contact">{t(tr.contactUs, lang)}</Link>

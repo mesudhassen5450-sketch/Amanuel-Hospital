@@ -1,8 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { PageHero } from "@/components/site/PageHero";
 import { Reveal } from "@/components/site/Reveal";
-import { AppointmentDialog } from "@/components/site/AppointmentDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { doctors } from "@/lib/site-data";
@@ -64,9 +63,11 @@ function DoctorsPage() {
                     )}
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">{doc.experience}</p>
-                  <AppointmentDialog>
-                    <Button className="mt-5 w-full rounded-xl">{t(tr.bookAppt, lang)}</Button>
-                  </AppointmentDialog>
+                  <Button asChild className="mt-5 w-full rounded-xl">
+                    <Link to="/booking">
+                      {t(tr.bookAppt, lang)}
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </Reveal>

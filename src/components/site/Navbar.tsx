@@ -9,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AppointmentDialog } from "@/components/site/AppointmentDialog";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
 import { t, translations, type Lang } from "@/lib/translations";
@@ -131,11 +130,11 @@ export function Navbar({ onOpenChat }: NavbarProps) {
           </Button>
 
           {/* Book appointment — desktop */}
-          <AppointmentDialog>
-            <Button className="hidden rounded-xl md:inline-flex">
+          <Button asChild className="hidden rounded-xl md:inline-flex">
+            <Link to="/booking">
               {t(tr.nav.bookAppt, lang)}
-            </Button>
-          </AppointmentDialog>
+            </Link>
+          </Button>
 
           {/* Mobile hamburger */}
           <Sheet open={open} onOpenChange={setOpen}>
@@ -191,9 +190,11 @@ export function Navbar({ onOpenChat }: NavbarProps) {
                   <MessageCircle className="h-4 w-4 ml-auto" />
                 </button>
 
-                <AppointmentDialog>
-                  <Button className="mt-4 rounded-xl">{t(tr.nav.bookAppt, lang)}</Button>
-                </AppointmentDialog>
+                <Button asChild className="mt-4 rounded-xl" onClick={() => setOpen(false)}>
+                  <Link to="/booking">
+                    {t(tr.nav.bookAppt, lang)}
+                  </Link>
+                </Button>
               </nav>
             </SheetContent>
           </Sheet>

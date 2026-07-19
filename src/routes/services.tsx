@@ -1,10 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { PageHero } from "@/components/site/PageHero";
 import { Reveal } from "@/components/site/Reveal";
-import { AppointmentDialog } from "@/components/site/AppointmentDialog";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { services } from "@/lib/site-data";
@@ -51,9 +50,11 @@ function ServicesPage() {
           ))}
         </div>
         <div className="mx-auto mt-14 max-w-7xl px-4 text-center lg:px-8">
-          <AppointmentDialog>
-            <Button size="lg" className="rounded-xl px-8">{t(tr.bookAppt, lang)}</Button>
-          </AppointmentDialog>
+          <Button asChild size="lg" className="rounded-xl px-8">
+            <Link to="/booking">
+              {t(tr.bookAppt, lang)}
+            </Link>
+          </Button>
         </div>
       </section>
     </SiteLayout>

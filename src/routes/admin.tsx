@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { getAdminBookings, updateBookingStatusServer, deleteBookingServer } from "@/lib/admin-server";
 
 export const Route = createFileRoute("/admin")({

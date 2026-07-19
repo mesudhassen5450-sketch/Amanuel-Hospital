@@ -32,8 +32,8 @@ export const initializeChapaPayment = createServerFn({ method: "POST" })
         callback_url: "https://webhook.site/d5e8211b-7a32-4467-bc56-3f3604b90151",
         return_url: `${origin}/payment-success?tx_ref=${txRef}`,
         customization: {
-          title: "Doctor Appointment Fee",
-          description: "Dr. Amanuel Hospital Appointment Booking"
+          title: "Amanuel Booking",
+          description: "Dr. Amanuel Hospital Appointment Fee"
         }
       };
 
@@ -50,9 +50,17 @@ export const initializeChapaPayment = createServerFn({ method: "POST" })
       
       if (!response.ok || result.status !== "success") {
         console.error("Chapa initialize failed:", result);
+        let errorMsg = "Failed to initialize payment with Chapa.";
+        if (typeof result.message === "string") {
+          errorMsg = result.message;
+        } else if (result.message && typeof result.message === "object") {
+          errorMsg = Object.entries(result.message)
+            .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(", ") : val}`)
+            .join(" | ");
+        }
         return {
           success: false,
-          message: result.message || "Failed to initialize payment with Chapa."
+          message: errorMsg
         };
       }
 
@@ -85,9 +93,17 @@ export const verifyChapaPayment = createServerFn({ method: "POST" })
       const result = await response.json();
       if (!response.ok || result.status !== "success") {
         console.error("Chapa verify failed:", result);
+        let errorMsg = "Verification failed.";
+        if (typeof result.message === "string") {
+          errorMsg = result.message;
+        } else if (result.message && typeof result.message === "object") {
+          errorMsg = Object.entries(result.message)
+            .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(", ") : val}`)
+            .join(" | ");
+        }
         return {
           success: false,
-          message: result.message || "Verification failed."
+          message: errorMsg
         };
       }
 

@@ -26,6 +26,7 @@ export const Route = createFileRoute("/admin")({
 
 function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   
@@ -36,44 +37,50 @@ function AdminPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [methodFilter, setMethodFilter] = useState("all");
 
-  const loadData = async (pass: string) => {
+  const loadData = async (user: string, pass: string) => {
     setRefreshing(true);
     try {
-      const data = await getAdminBookings({ data: { passcode: pass } });
+      const data = await getAdminBookings({ data: { username: user, password: pass } });
       // Sort bookings by creation date descending
       const sorted = [...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setBookings(sorted);
       setIsAuthenticated(true);
-      sessionStorage.setItem("admin_passcode", pass);
+      sessionStorage.setItem("admin_username", user);
+      sessionStorage.setItem("admin_password", pass);
     } catch (err: any) {
-      toast.error(err.message || "Invalid passcode or connection failed.");
-      sessionStorage.removeItem("admin_passcode");
+      toast.error(err.message || "Invalid credentials or connection failed.");
+      sessionStorage.removeItem("admin_username");
+      sessionStorage.removeItem("admin_password");
     } finally {
       setRefreshing(false);
     }
   };
 
-  // Check for stored passcode on mount
+  // Check for stored credentials on mount
   useEffect(() => {
-    const stored = sessionStorage.getItem("admin_passcode");
-    if (stored) {
-      setPassword(stored);
-      loadData(stored);
+    const storedUser = sessionStorage.getItem("admin_username");
+    const storedPass = sessionStorage.getItem("admin_password");
+    if (storedUser && storedPass) {
+      setUsername(storedUser);
+      setPassword(storedPass);
+      loadData(storedUser, storedPass);
     }
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password) {
-      toast.error("Please enter the cashier passcode.");
+    if (!username || !password) {
+      toast.error("Please enter both username and password.");
       return;
     }
-    loadData(password);
+    loadData(username, password);
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("admin_passcode");
+    sessionStorage.removeItem("admin_username");
+    sessionStorage.removeItem("admin_password");
     setIsAuthenticated(false);
+    setUsername("");
     setPassword("");
     setBookings([]);
     toast.info("Logged out successfully.");
@@ -86,7 +93,7 @@ function AdminPage() {
       const result = await updateBookingStatusServer({ data: { id, status: "Paid & Confirmed" } });
       if (result) {
         toast.success("Payment confirmed successfully!", { id });
-        loadData(password);
+        loadData(username, password);
       } else {
         toast.error("Failed to update status.", { id });
       }
@@ -102,7 +109,7 @@ function AdminPage() {
       const result = await updateBookingStatusServer({ data: { id, status: "Cancelled" } });
       if (result) {
         toast.success("Booking cancelled successfully.", { id });
-        loadData(password);
+        loadData(username, password);
       } else {
         toast.error("Failed to cancel booking.", { id });
       }
@@ -119,7 +126,7 @@ function AdminPage() {
       const result = await deleteBookingServer({ data: { id } });
       if (result) {
         toast.success("Booking record deleted.", { id });
-        loadData(password);
+        loadData(username, password);
       } else {
         toast.error("Failed to delete record.", { id });
       }
@@ -169,23 +176,39 @@ function AdminPage() {
               </div>
               <CardTitle className="text-2xl font-bold font-display">Cashier Portal Access</CardTitle>
               <CardDescription className="text-sm text-muted-foreground mt-2">
-                Enter the administration passcode to view and manage hospital appointments.
+                Enter your admin credentials to manage hospital appointments.
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleLogin}>
               <CardContent className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="admin-passcode" className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Label htmlFor="admin-username" className="font-semibold text-foreground flex items-center gap-1.5">
                     <Key className="h-4 w-4 text-primary" />
-                    Staff Passcode
+                    Username
                   </Label>
-                  <Input 
-                    id="admin-passcode" 
-                    type="password" 
+                  <Input
+                    id="admin-username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter username"
+                    autoComplete="username"
+                    className="rounded-xl h-11 border-input/60 focus-visible:ring-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-password" className="font-semibold text-foreground flex items-center gap-1.5">
+                    <Lock className="h-4 w-4 text-primary" />
+                    Password
+                  </Label>
+                  <Input
+                    id="admin-password"
+                    type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter admin/cashier passcode"
-                    className="rounded-xl h-11 border-input/60 focus-visible:ring-primary text-center tracking-widest text-lg"
+                    placeholder="Enter password"
+                    autoComplete="current-password"
+                    className="rounded-xl h-11 border-input/60 focus-visible:ring-primary tracking-widest text-lg"
                   />
                 </div>
               </CardContent>
@@ -214,7 +237,7 @@ function AdminPage() {
             </div>
             
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <Button onClick={() => loadData(password)} disabled={refreshing} variant="outline" className="rounded-xl flex-1 sm:flex-initial gap-1.5">
+              <Button onClick={() => loadData(username, password)} disabled={refreshing} variant="outline" className="rounded-xl flex-1 sm:flex-initial gap-1.5">
                 <RefreshCw className={`h-4 w-4 ${refreshing && "animate-spin"}`} />
                 Refresh
               </Button>

@@ -2,11 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { getBookings, addBooking, updateBookingStatus, deleteBooking, type BookingRecord } from "./bookings-store";
 
 export const getAdminBookings = createServerFn({ method: "POST" })
-  .validator((data: { passcode: string }) => data)
+  .validator((data: { username: string; password: string }) => data)
   .handler(async ({ data }) => {
-    // Simple passcode check for admin security
-    if (data.passcode !== "password123") {
-      throw new Error("Unauthorized access: Invalid passcode.");
+    // Username + Password authentication
+    if (data.username !== "admin" || data.password !== "4321") {
+      throw new Error("Unauthorized access: Invalid username or password.");
     }
     return await getBookings();
   });

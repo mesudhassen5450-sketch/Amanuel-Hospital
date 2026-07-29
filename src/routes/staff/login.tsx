@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStaffAuth } from "@/lib/staff-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Stethoscope, Lock, User, AlertCircle } from "lucide-react";
+import { Stethoscope, Lock, User, AlertCircle, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/staff/login")({
   head: () => ({
@@ -15,16 +15,27 @@ export const Route = createFileRoute("/staff/login")({
 });
 
 function StaffLoginPage() {
-  const { login, isAuthenticated } = useStaffAuth();
+  const { login, isAuthenticated, hydrated } = useStaffAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
 
-  // Already logged in → redirect
-  if (isAuthenticated) {
-    window.location.href = "/staff/dashboard";
-    return null;
+  // Wait for hydration before checking auth
+  useEffect(() => {
+    if (hydrated && isAuthenticated) {
+      window.location.href = "/staff/dashboard";
+    }
+  }, [hydrated, isAuthenticated]);
+
+  // Show spinner while hydrating
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground gap-2">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span className="text-sm">Loading...</span>
+      </div>
+    );
   }
 
   const handleSubmit = (e: React.FormEvent) => {

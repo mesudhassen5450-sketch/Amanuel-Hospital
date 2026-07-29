@@ -12,9 +12,9 @@ interface StaffAuthCtx {
   login: (username: string, password: string) => boolean;
   logout: () => void;
   isAuthenticated: boolean;
+  hydrated: boolean; // true once sessionStorage has been read on the client
 }
 
-// Credentials
 const STAFF_CREDENTIALS: Record<string, { password: string; role: StaffRole }> = {
   staff:     { password: "4321", role: "staff" },
   reception: { password: "4321", role: "reception" },
@@ -25,31 +25,34 @@ const SESSION_KEY = "staff_session";
 const StaffAuthContext = createContext<StaffAuthCtx | null>(null);
 
 export function StaffAuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<StaffUser | null>(null);
+  const [user, setUser]       = useState<StaffUser | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
+  // Read session ONCE after client mount — never runs on server
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem(SESSION_KEY);
       if (stored) setUser(JSON.parse(stored));
     } catch {}
+    setHydrated(true); // mark as ready regardless of whether session existed
   }, []);
 
   const login = (username: string, password: string): boolean => {
-    const cred = STAFF_CREDENTIALS[username];
+    const cred = STAFF_CREDENTIALS[username.toLowerCase()];
     if (!cred || cred.password !== password) return false;
-    const u: StaffUser = { username, role: cred.role };
+    const u: StaffUser = { username: username.toLowerCase(), role: cred.role };
     setUser(u);
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(u));
+    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(u)); } catch {}
     return true;
   };
 
   const logout = () => {
     setUser(null);
-    sessionStorage.removeItem(SESSION_KEY);
+    try { sessionStorage.removeItem(SESSION_KEY); } catch {}
   };
 
   return (
-    <StaffAuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <StaffAuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, hydrated }}>
       {children}
     </StaffAuthContext.Provider>
   );

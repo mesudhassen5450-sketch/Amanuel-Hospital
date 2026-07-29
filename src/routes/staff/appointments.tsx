@@ -36,14 +36,14 @@ function AppointmentsPage() {
   const [patients, setPatients]   = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
   const [query, setQuery]         = useState("");
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split("T")[0]);
+  const [dateFilter, setDateFilter] = useState(""); // empty = show all dates
   const [linkModal, setLinkModal] = useState<{ apptId: string; search: string } | null>(null);
 
-  const load = async () => {
+  const load = async (date?: string) => {
     setLoading(true);
     try {
       const [a, p] = await Promise.all([
-        getReceptionAppointments({ data: { date: dateFilter || undefined } }),
+        getReceptionAppointments({ data: { date: date || undefined } }),
         getPatients(),
       ]);
       setAppts(a as any[]);
@@ -52,7 +52,7 @@ function AppointmentsPage() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [dateFilter]);
+  useEffect(() => { load(dateFilter); }, [dateFilter]);
 
   const handleStatus = async (id: string, visitStatus: string) => {
     try {
@@ -67,7 +67,7 @@ function AppointmentsPage() {
       await linkAppointmentToPatient({ data: { appointmentId: apptId, patientId } });
       toast.success("Appointment linked to patient record.");
       setLinkModal(null);
-      load();
+      load(dateFilter);
     } catch (e: any) { toast.error(e.message); }
   };
 

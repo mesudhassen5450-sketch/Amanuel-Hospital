@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, CreditCard, ArrowRight, Sparkles, Loader2, AlertCircle } from "lucide-react";
+import { CalendarIcon, Clock, CreditCard, ArrowRight, Sparkles, Loader2, AlertCircle, CheckCircle2, User, Phone, Calendar as CalendarIcon2, BadgeCheck } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { PageHero } from "@/components/site/PageHero";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,20 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import { useBooking, type BookingData } from "@/lib/booking-context";
 import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/translations";
 import { cn } from "@/lib/utils";
-import { initializeChapaPayment } from "@/lib/chapa-server";
-import { addBookingServer } from "@/lib/admin-server";
+import { supabase } from "@/lib/supabase";
+
+// Payment method mapping: UI value → database value
+const PAYMENT_DB_MAP: Record<string, string> = {
+  "Telebirr": "telebirr",
+  "CBE Birr": "cbe_birr",
+  "Card / Other": "card",
+  "Cash": "cash",
+};
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -39,6 +47,19 @@ const paymentMethods = [
   { id: "Cash", name: "Cash", icon: "💵", desc: "Pay in cash at the hospital counter" }
 ] as const;
 
+// Type for the confirmed booking returned from Supabase
+interface ConfirmedAppointment {
+  id: string;
+  full_name: string;
+  phone: string;
+  appointment_date: string;
+  appointment_time: string;
+  payment_method: string;
+  amount: number;
+  payment_status: string;
+  booking_status: string;
+}
+
 function BookingPage() {
   const { setBooking } = useBooking();
   const { lang } = useLanguage();
@@ -56,6 +77,7 @@ function BookingPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [confirmed, setConfirmed] = useState<ConfirmedAppointment | null>(null);
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -64,7 +86,6 @@ function BookingPage() {
       errs.fullName = "Please enter a valid full name (at least 2 characters).";
     }
     
-    // Validate Ethiopian phone numbers (+251... or 09...) or simple international numbers
     const phoneTrim = form.phoneNumber.trim();
     if (!/^[+\d][\d\s-]{6,}$/.test(phoneTrim)) {
       errs.phoneNumber = "Please enter a valid phone number.";
@@ -88,67 +109,212 @@ function BookingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate() && selectedDate && selectedPayment) {
-      setSubmitError("");
+    if (!validate() || !selectedDate || !selectedPayment) return;
+
+    setSubmitError("");
+    setLoading(true);
+
+    const dbPaymentMethod = PAYMENT_DB_MAP[selectedPayment];
+    const appointmentDate = format(selectedDate, "yyyy-MM-dd");
+
+    try {
+      const { data, error } = await supabase
+        .from("appointments")
+        .insert({
+          full_name: form.fullName.trim(),
+          phone: form.phoneNumber.trim(),
+          appointment_date: appointmentDate,
+          appointment_time: selectedTime,
+          payment_method: dbPaymentMethod,
+          amount: 300,
+          payment_status: "pending",
+          booking_status: "pending",
+          transaction_reference: null,
+          chapa_transaction_id: null,
+          note: null,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Supabase insert error:", error);
+        setSubmitError(
+          "We could not complete your appointment request. Please check your information and try again."
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Also persist in session context for other pages
       const bookingData: BookingData = {
         fullName: form.fullName.trim(),
         phoneNumber: form.phoneNumber.trim(),
-        appointmentDate: format(selectedDate, "yyyy-MM-dd"),
+        appointmentDate,
         appointmentTime: selectedTime,
         paymentMethod: selectedPayment,
         amount: 300,
-        status: selectedPayment === "Cash" ? "Waiting for Payment" : "Pending Checkout"
+        status: "pending",
       };
-      
-      if (selectedPayment === "Cash") {
-        setLoading(true);
-        try {
-          await addBookingServer({
-            data: {
-              fullName: bookingData.fullName,
-              phoneNumber: bookingData.phoneNumber,
-              appointmentDate: bookingData.appointmentDate,
-              appointmentTime: bookingData.appointmentTime,
-              paymentMethod: bookingData.paymentMethod,
-              amount: bookingData.amount,
-              status: bookingData.status
-            }
-          });
-          setBooking(bookingData);
-          navigate({ to: "/payment-summary" });
-        } catch (err: any) {
-          console.error("Failed to save booking to server:", err);
-          setSubmitError("Failed to save appointment. Please try again.");
-          setLoading(false);
-        }
-      } else {
-        setLoading(true);
-        try {
-          const result = await initializeChapaPayment({
-            data: {
-              amount: 300,
-              fullName: form.fullName.trim(),
-              phoneNumber: form.phoneNumber.trim(),
-              origin: window.location.origin
-            }
-          });
+      setBooking(bookingData);
 
-          if (result.success && result.checkoutUrl) {
-            bookingData.txRef = result.txRef;
-            setBooking(bookingData);
-            window.location.href = result.checkoutUrl;
-          } else {
-            setSubmitError(result.message || "Failed to initiate payment. Please try again.");
-            setLoading(false);
-          }
-        } catch (err: any) {
-          console.error("Payment initialization error:", err);
-          setSubmitError("An error occurred while connecting to Chapa. Please try again.");
-          setLoading(false);
-        }
-      }
+      setConfirmed(data as ConfirmedAppointment);
+    } catch (err: any) {
+      console.error("Unexpected booking error:", err);
+      setSubmitError(
+        "We could not complete your appointment request. Please check your information and try again."
+      );
+    } finally {
+      setLoading(false);
     }
   };
+
+  // ── Success screen ────────────────────────────────────────────────────────
+  if (confirmed) {
+    const isCash = confirmed.payment_method === "cash";
+    const methodLabel =
+      confirmed.payment_method === "telebirr" ? "Telebirr" :
+      confirmed.payment_method === "cbe_birr" ? "CBE Birr" :
+      confirmed.payment_method === "card" ? "Card / Other Banks" : "Cash";
+
+    return (
+      <SiteLayout>
+        <PageHero
+          breadcrumb={lang === "am" ? "ቀጠሮ ማረጋገጫ" : lang === "or" ? "Mirkaneessa Qaxaree" : "Booking Confirmation"}
+          title={lang === "am" ? "ቀጠሮ ተመዝግቧል" : lang === "or" ? "Qaxareen Galmaa'e" : "Appointment Registered"}
+          subtitle={lang === "am" ? "ቀጠሮዎ በተሳካ ሁኔታ ተቀብሏል" : lang === "or" ? "Qaxareen keessan milkiin qeebalame" : "Your appointment request has been submitted successfully."}
+        />
+        <section className="py-12 md:py-20 px-4">
+          <div className="mx-auto max-w-2xl">
+            <Card className="border border-border bg-card shadow-xl rounded-3xl overflow-hidden animate-fade-in">
+              <div className="h-2 bg-gradient-to-r from-primary via-emerald-500 to-primary" />
+              <CardHeader className="text-center p-6 sm:p-8 border-b border-border/40 bg-primary/5">
+                <div className="flex justify-center mb-4">
+                  <div className="bg-primary/10 p-3 rounded-full">
+                    <CheckCircle2 className="h-14 w-14 text-primary" />
+                  </div>
+                </div>
+                <CardTitle className="text-2xl sm:text-3xl font-extrabold text-primary font-display">
+                  Booking Submitted!
+                </CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-2 max-w-sm mx-auto">
+                  Your appointment request has been submitted successfully. Your booking is currently pending payment confirmation.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="p-6 sm:p-8 space-y-6">
+                {/* Status badges */}
+                <div className="flex items-center justify-center gap-3 flex-wrap">
+                  <Badge variant="outline" className="rounded-full px-4 py-1.5 text-xs font-semibold bg-amber-500/10 text-amber-600 border-amber-500/20">
+                    Payment Status: Pending
+                  </Badge>
+                  <Badge variant="outline" className="rounded-full px-4 py-1.5 text-xs font-semibold bg-amber-500/10 text-amber-600 border-amber-500/20">
+                    Booking Status: Pending
+                  </Badge>
+                </div>
+
+                {/* Appointment details */}
+                <div className="rounded-2xl border border-border/60 bg-secondary/20 p-5 space-y-4">
+                  <h3 className="font-display text-sm font-semibold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5">
+                    <BadgeCheck className="h-4 w-4 text-primary" />
+                    Appointment Details
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-background border border-border p-2 rounded-xl text-primary">
+                        <User className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Patient Name</p>
+                        <p className="font-semibold text-foreground">{confirmed.full_name}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-background border border-border p-2 rounded-xl text-primary">
+                        <Phone className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Phone Number</p>
+                        <p className="font-semibold text-foreground">{confirmed.phone}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-background border border-border p-2 rounded-xl text-primary">
+                        <CalendarIcon2 className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Appointment Date</p>
+                        <p className="font-semibold text-foreground">{confirmed.appointment_date}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-background border border-border p-2 rounded-xl text-primary">
+                        <Clock className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Appointment Time</p>
+                        <p className="font-semibold text-foreground">{confirmed.appointment_time}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-background border border-border p-2 rounded-xl text-primary">
+                        <CreditCard className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Payment Method</p>
+                        <p className="font-semibold text-foreground">{methodLabel}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-background border border-border p-2 rounded-xl text-primary">
+                        <Sparkles className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Amount</p>
+                        <p className="font-semibold text-foreground">{confirmed.amount} ETB</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment instruction */}
+                <div className={cn(
+                  "rounded-2xl border p-4 text-sm",
+                  isCash
+                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                    : "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400"
+                )}>
+                  {isCash
+                    ? "Your appointment has been registered. Please pay at the hospital cashier."
+                    : "Your appointment has been registered. Online payment integration will be completed in the next phase."}
+                </div>
+              </CardContent>
+
+              <CardFooter className="flex flex-col sm:flex-row gap-3 p-6 sm:p-8 bg-secondary/10 border-t border-border/40">
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-2xl h-11 border-border/60"
+                  onClick={() => {
+                    setConfirmed(null);
+                    setForm({ fullName: "", phoneNumber: "" });
+                    setSelectedDate(undefined);
+                    setSelectedTime("");
+                    setSelectedPayment("");
+                    setErrors({});
+                    setSubmitError("");
+                  }}
+                >
+                  Book Another
+                </Button>
+                <Button asChild className="flex-1 rounded-2xl h-11 shadow-sm">
+                  <a href="/">Go to Homepage</a>
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </section>
+      </SiteLayout>
+    );
+  }
 
   return (
     <SiteLayout>
@@ -335,7 +501,7 @@ function BookingPage() {
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Redirecting to Payment...
+                      Processing your booking...
                     </>
                   ) : (
                     <>

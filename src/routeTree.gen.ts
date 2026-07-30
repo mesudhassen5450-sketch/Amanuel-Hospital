@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 // noinspection JSUnusedGlobalSymbols
-// This file was manually updated for Phase 4 staff routes.
+// Manually updated for Phase 5 doctor routes.
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -24,6 +24,10 @@ import { Route as StaffPatientsNewRouteImport } from './routes/staff/patients/ne
 import { Route as StaffPatientsMrnRouteImport } from './routes/staff/patients/$mrn'
 import { Route as StaffAppointmentsRouteImport } from './routes/staff/appointments'
 import { Route as StaffPaymentsRouteImport } from './routes/staff/payments'
+// Doctor routes
+import { Route as DoctorDashboardRouteImport } from './routes/staff/doctor/dashboard'
+import { Route as DoctorQueueRouteImport } from './routes/staff/doctor/queue'
+import { Route as DoctorPatientMrnRouteImport } from './routes/staff/doctor/patient/$mrn'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({ id: '/sitemap.xml', path: '/sitemap.xml', getParentRoute: () => rootRouteImport } as any)
 const ServicesRoute = ServicesRouteImport.update({ id: '/services', path: '/services', getParentRoute: () => rootRouteImport } as any)
@@ -37,7 +41,6 @@ const BookingRoute = BookingRouteImport.update({ id: '/booking', path: '/booking
 const AdminRoute = AdminRouteImport.update({ id: '/admin', path: '/admin', getParentRoute: () => rootRouteImport } as any)
 const AboutRoute = AboutRouteImport.update({ id: '/about', path: '/about', getParentRoute: () => rootRouteImport } as any)
 const IndexRoute = IndexRouteImport.update({ id: '/', path: '/', getParentRoute: () => rootRouteImport } as any)
-// Staff
 const StaffLoginRoute = StaffLoginRouteImport.update({ id: '/staff/login', path: '/staff/login', getParentRoute: () => rootRouteImport } as any)
 const StaffDashboardRoute = StaffDashboardRouteImport.update({ id: '/staff/dashboard', path: '/staff/dashboard', getParentRoute: () => rootRouteImport } as any)
 const StaffPatientsIndexRoute = StaffPatientsIndexRouteImport.update({ id: '/staff/patients/', path: '/staff/patients/', getParentRoute: () => rootRouteImport } as any)
@@ -45,118 +48,9 @@ const StaffPatientsNewRoute = StaffPatientsNewRouteImport.update({ id: '/staff/p
 const StaffPatientsMrnRoute = StaffPatientsMrnRouteImport.update({ id: '/staff/patients/$mrn', path: '/staff/patients/$mrn', getParentRoute: () => rootRouteImport } as any)
 const StaffAppointmentsRoute = StaffAppointmentsRouteImport.update({ id: '/staff/appointments', path: '/staff/appointments', getParentRoute: () => rootRouteImport } as any)
 const StaffPaymentsRoute = StaffPaymentsRouteImport.update({ id: '/staff/payments', path: '/staff/payments', getParentRoute: () => rootRouteImport } as any)
-
-export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/admin': typeof AdminRoute
-  '/booking': typeof BookingRoute
-  '/contact': typeof ContactRoute
-  '/departments': typeof DepartmentsRoute
-  '/doctors': typeof DoctorsRoute
-  '/gallery': typeof GalleryRoute
-  '/payment-success': typeof PaymentSuccessRoute
-  '/payment-summary': typeof PaymentSummaryRoute
-  '/services': typeof ServicesRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/staff/login': typeof StaffLoginRoute
-  '/staff/dashboard': typeof StaffDashboardRoute
-  '/staff/patients/': typeof StaffPatientsIndexRoute
-  '/staff/patients/new': typeof StaffPatientsNewRoute
-  '/staff/patients/$mrn': typeof StaffPatientsMrnRoute
-  '/staff/appointments': typeof StaffAppointmentsRoute
-  '/staff/payments': typeof StaffPaymentsRoute
-}
-export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/admin': typeof AdminRoute
-  '/booking': typeof BookingRoute
-  '/contact': typeof ContactRoute
-  '/departments': typeof DepartmentsRoute
-  '/doctors': typeof DoctorsRoute
-  '/gallery': typeof GalleryRoute
-  '/payment-success': typeof PaymentSuccessRoute
-  '/payment-summary': typeof PaymentSummaryRoute
-  '/services': typeof ServicesRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/staff/login': typeof StaffLoginRoute
-  '/staff/dashboard': typeof StaffDashboardRoute
-  '/staff/patients': typeof StaffPatientsIndexRoute
-  '/staff/patients/new': typeof StaffPatientsNewRoute
-  '/staff/patients/$mrn': typeof StaffPatientsMrnRoute
-  '/staff/appointments': typeof StaffAppointmentsRoute
-  '/staff/payments': typeof StaffPaymentsRoute
-}
-export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/admin': typeof AdminRoute
-  '/booking': typeof BookingRoute
-  '/contact': typeof ContactRoute
-  '/departments': typeof DepartmentsRoute
-  '/doctors': typeof DoctorsRoute
-  '/gallery': typeof GalleryRoute
-  '/payment-success': typeof PaymentSuccessRoute
-  '/payment-summary': typeof PaymentSummaryRoute
-  '/services': typeof ServicesRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/staff/login': typeof StaffLoginRoute
-  '/staff/dashboard': typeof StaffDashboardRoute
-  '/staff/patients/': typeof StaffPatientsIndexRoute
-  '/staff/patients/new': typeof StaffPatientsNewRoute
-  '/staff/patients/$mrn': typeof StaffPatientsMrnRoute
-  '/staff/appointments': typeof StaffAppointmentsRoute
-  '/staff/payments': typeof StaffPaymentsRoute
-}
-export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/' | '/about' | '/admin' | '/booking' | '/contact' | '/departments'
-    | '/doctors' | '/gallery' | '/payment-success' | '/payment-summary'
-    | '/services' | '/sitemap.xml'
-    | '/staff/login' | '/staff/dashboard' | '/staff/patients/'
-    | '/staff/patients/new' | '/staff/patients/$mrn'
-    | '/staff/appointments' | '/staff/payments'
-  fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/' | '/about' | '/admin' | '/booking' | '/contact' | '/departments'
-    | '/doctors' | '/gallery' | '/payment-success' | '/payment-summary'
-    | '/services' | '/sitemap.xml'
-    | '/staff/login' | '/staff/dashboard' | '/staff/patients'
-    | '/staff/patients/new' | '/staff/patients/$mrn'
-    | '/staff/appointments' | '/staff/payments'
-  id:
-    | '__root__' | '/' | '/about' | '/admin' | '/booking' | '/contact'
-    | '/departments' | '/doctors' | '/gallery' | '/payment-success'
-    | '/payment-summary' | '/services' | '/sitemap.xml'
-    | '/staff/login' | '/staff/dashboard' | '/staff/patients/'
-    | '/staff/patients/new' | '/staff/patients/$mrn'
-    | '/staff/appointments' | '/staff/payments'
-  fileRoutesById: FileRoutesById
-}
-export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
-  AdminRoute: typeof AdminRoute
-  BookingRoute: typeof BookingRoute
-  ContactRoute: typeof ContactRoute
-  DepartmentsRoute: typeof DepartmentsRoute
-  DoctorsRoute: typeof DoctorsRoute
-  GalleryRoute: typeof GalleryRoute
-  PaymentSuccessRoute: typeof PaymentSuccessRoute
-  PaymentSummaryRoute: typeof PaymentSummaryRoute
-  ServicesRoute: typeof ServicesRoute
-  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  StaffLoginRoute: typeof StaffLoginRoute
-  StaffDashboardRoute: typeof StaffDashboardRoute
-  StaffPatientsIndexRoute: typeof StaffPatientsIndexRoute
-  StaffPatientsNewRoute: typeof StaffPatientsNewRoute
-  StaffPatientsMrnRoute: typeof StaffPatientsMrnRoute
-  StaffAppointmentsRoute: typeof StaffAppointmentsRoute
-  StaffPaymentsRoute: typeof StaffPaymentsRoute
-}
+const DoctorDashboardRoute = DoctorDashboardRouteImport.update({ id: '/staff/doctor/dashboard', path: '/staff/doctor/dashboard', getParentRoute: () => rootRouteImport } as any)
+const DoctorQueueRoute = DoctorQueueRouteImport.update({ id: '/staff/doctor/queue', path: '/staff/doctor/queue', getParentRoute: () => rootRouteImport } as any)
+const DoctorPatientMrnRoute = DoctorPatientMrnRouteImport.update({ id: '/staff/doctor/patient/$mrn', path: '/staff/doctor/patient/$mrn', getParentRoute: () => rootRouteImport } as any)
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
@@ -179,34 +73,25 @@ declare module '@tanstack/react-router' {
     '/staff/patients/$mrn': { id: '/staff/patients/$mrn'; path: '/staff/patients/$mrn'; fullPath: '/staff/patients/$mrn'; preLoaderRoute: typeof StaffPatientsMrnRouteImport; parentRoute: typeof rootRouteImport }
     '/staff/appointments': { id: '/staff/appointments'; path: '/staff/appointments'; fullPath: '/staff/appointments'; preLoaderRoute: typeof StaffAppointmentsRouteImport; parentRoute: typeof rootRouteImport }
     '/staff/payments': { id: '/staff/payments'; path: '/staff/payments'; fullPath: '/staff/payments'; preLoaderRoute: typeof StaffPaymentsRouteImport; parentRoute: typeof rootRouteImport }
+    '/staff/doctor/dashboard': { id: '/staff/doctor/dashboard'; path: '/staff/doctor/dashboard'; fullPath: '/staff/doctor/dashboard'; preLoaderRoute: typeof DoctorDashboardRouteImport; parentRoute: typeof rootRouteImport }
+    '/staff/doctor/queue': { id: '/staff/doctor/queue'; path: '/staff/doctor/queue'; fullPath: '/staff/doctor/queue'; preLoaderRoute: typeof DoctorQueueRouteImport; parentRoute: typeof rootRouteImport }
+    '/staff/doctor/patient/$mrn': { id: '/staff/doctor/patient/$mrn'; path: '/staff/doctor/patient/$mrn'; fullPath: '/staff/doctor/patient/$mrn'; preLoaderRoute: typeof DoctorPatientMrnRouteImport; parentRoute: typeof rootRouteImport }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute,
-  AboutRoute,
-  AdminRoute,
-  BookingRoute,
-  ContactRoute,
-  DepartmentsRoute,
-  DoctorsRoute,
-  GalleryRoute,
-  PaymentSuccessRoute,
-  PaymentSummaryRoute,
-  ServicesRoute,
-  SitemapDotxmlRoute,
-  StaffLoginRoute,
-  StaffDashboardRoute,
-  StaffPatientsIndexRoute,
-  StaffPatientsNewRoute,
-  StaffPatientsMrnRoute,
-  StaffAppointmentsRoute,
+const rootRouteChildren = {
+  IndexRoute, AboutRoute, AdminRoute, BookingRoute, ContactRoute,
+  DepartmentsRoute, DoctorsRoute, GalleryRoute, PaymentSuccessRoute,
+  PaymentSummaryRoute, ServicesRoute, SitemapDotxmlRoute,
+  StaffLoginRoute, StaffDashboardRoute, StaffPatientsIndexRoute,
+  StaffPatientsNewRoute, StaffPatientsMrnRoute, StaffAppointmentsRoute,
   StaffPaymentsRoute,
+  DoctorDashboardRoute, DoctorQueueRoute, DoctorPatientMrnRoute,
 }
 
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<any>()
 
 import type { getRouter } from './router.tsx'
 import type { startInstance } from './start.ts'

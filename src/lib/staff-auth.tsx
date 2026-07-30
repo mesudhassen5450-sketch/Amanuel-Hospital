@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
-export type StaffRole = "staff" | "reception" | null;
+export type StaffRole = "staff" | "reception" | "doctor" | null;
 
 interface StaffUser {
   username: string;
@@ -18,6 +18,7 @@ interface StaffAuthCtx {
 const STAFF_CREDENTIALS: Record<string, { password: string; role: StaffRole }> = {
   staff:     { password: "4321", role: "staff" },
   reception: { password: "4321", role: "reception" },
+  doctor:    { password: "4321", role: "doctor" },
 };
 
 const SESSION_KEY = "staff_session";

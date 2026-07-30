@@ -1,23 +1,35 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, Users, CalendarDays, CreditCard, LogOut, Stethoscope, Menu, X } from "lucide-react";
-import { useState } from "react";
+import {
+  LayoutDashboard, Users, CalendarDays, CreditCard, LogOut,
+  Stethoscope, Menu, X, Clock, ClipboardList,
+} from "lucide-react";
 import { useStaffAuth } from "@/lib/staff-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const NAV = [
+const RECEPTION_NAV = [
   { to: "/staff/dashboard",    label: "Dashboard",     icon: LayoutDashboard },
   { to: "/staff/patients",     label: "Patients",      icon: Users },
   { to: "/staff/appointments", label: "Appointments",  icon: CalendarDays },
   { to: "/staff/payments",     label: "Payments",      icon: CreditCard },
 ];
 
+const DOCTOR_NAV = [
+  { to: "/staff/doctor/dashboard", label: "Doctor Dashboard", icon: LayoutDashboard },
+  { to: "/staff/doctor/queue",     label: "Waiting Patients",  icon: Clock },
+  { to: "/staff/patients",         label: "Patient Records",   icon: Users },
+  { to: "/staff/doctor/queue",     label: "Consultations",     icon: ClipboardList },
+];
+
 export function StaffLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useStaffAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+
+  const isDoctor = user?.role === "doctor";
+  const NAV = isDoctor ? DOCTOR_NAV : RECEPTION_NAV;
 
   const handleLogout = () => {
     logout();
@@ -40,17 +52,19 @@ export function StaffLayout({ children }: { children: ReactNode }) {
           </div>
           <div>
             <p className="text-sm font-bold text-foreground leading-tight">Dr. Amanuel</p>
-            <p className="text-[11px] text-muted-foreground">Staff Portal</p>
+            <p className="text-[11px] text-muted-foreground capitalize">
+              {isDoctor ? "Doctor Portal" : "Staff Portal"}
+            </p>
           </div>
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 p-4 space-y-1">
-          {NAV.map(({ to, label, icon: Icon }) => {
-            const active = location.pathname.startsWith(to);
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {NAV.map(({ to, label, icon: Icon }, idx) => {
+            const active = location.pathname === to || location.pathname.startsWith(to + "/");
             return (
               <Link
-                key={to}
+                key={`${to}-${idx}`}
                 to={to}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
@@ -72,37 +86,26 @@ export function StaffLayout({ children }: { children: ReactNode }) {
           <div className="mb-3 px-3">
             <p className="text-xs text-muted-foreground">Signed in as</p>
             <p className="text-sm font-semibold text-foreground capitalize">{user?.username}</p>
+            <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
           </div>
           <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
+            variant="ghost" size="sm" onClick={handleLogout}
             className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
           >
-            <LogOut className="h-4 w-4" />
-            Logout
+            <LogOut className="h-4 w-4" /> Logout
           </Button>
         </div>
       </aside>
 
-      {/* Overlay for mobile */}
+      {/* Mobile overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
         <header className="h-16 border-b border-border/60 bg-card flex items-center gap-4 px-4 sm:px-6 sticky top-0 z-30">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <div className="flex-1" />
@@ -111,7 +114,6 @@ export function StaffLayout({ children }: { children: ReactNode }) {
           </span>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
           {children}
         </main>

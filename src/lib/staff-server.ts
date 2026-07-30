@@ -161,3 +161,142 @@ export const getDashboardStats = createServerFn({ method: "POST" })
       paidPayment:       appts.filter((a: any) => a.payment_status === "paid").length,
     };
   });
+
+// ── Doctor: get patient queue (waiting + checked_in) ─────────────────────────
+export const getDoctorQueue = createServerFn({ method: "POST" })
+  .validator((d: { date?: string }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    let q = sb
+      .from("appointments")
+      .select("*, patients(id,mrn,full_name,phone,gender,date_of_birth,blood_group,allergies,chronic_conditions)")
+      .in("visit_status", ["waiting", "checked_in", "completed"])
+      .order("appointment_date", { ascending: true })
+      .order("appointment_time", { ascending: true });
+    if (data.date) q = q.eq("appointment_date", data.date);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({
+      id:              String(r.id),
+      fullName:        r.full_name,
+      phone:           r.phone,
+      appointmentDate: r.appointment_date,
+      appointmentTime: r.appointment_time,
+      paymentMethod:   r.payment_method,
+      paymentStatus:   r.payment_status,
+      visitStatus:     r.visit_status ?? "booked",
+      patientId:       r.patient_id ?? null,
+      patientMRN:      r.patients?.mrn ?? null,
+      patient:         r.patients ?? null,
+      createdAt:       r.created_at,
+    }));
+  });
+
+// ── Doctor: dashboard stats ───────────────────────────────────────────────────
+export const getDoctorStats = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const sb = getSupabase();
+    const today = new Date().toISOString().split("T")[0];
+    const { data: appts, error } = await sb
+      .from("appointments")
+      .select("id,visit_status")
+      .eq("appointment_date", today);
+    if (error) throw new Error(error.message);
+    const rows = appts ?? [];
+    return {
+      todayPatients: rows.length,
+      waiting:       rows.filter((a: any) => a.visit_status === "waiting").length,
+      checkedIn:     rows.filter((a: any) => a.visit_status === "checked_in").length,
+      completed:     rows.filter((a: any) => a.visit_status === "completed").length,
+    };
+  });
+
+// ── Get full patient + latest appointment by MRN ──────────────────────────────
+export const getPatientWithAppointment = createServerFn({ method: "POST" })
+  .validator((d: { mrn: string; appointmentId?: string }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const { data: patient, error: pErr } = await sb
+      .from("patients")
+      .select("*")
+      .eq("mrn", data.mrn)
+      .single();
+    if (pErr) throw new Error(pErr.message);
+
+    let appointment = null;
+    if (data.appointmentId) {
+      const { data: appt } = await sb
+        .from("appointments")
+        .select("*")
+        .eq("id", data.appointmentId)
+        .single();
+      appointment = appt;
+    } else {
+      // Get the most recent appointment for this patient
+      const { data: appt } = await sb
+        .from("appointments")
+        .select("*")
+        .eq("patient_id", patient.id)
+        .order("appointment_date", { ascending: false })
+        .limit(1)
+        .single();
+      appointment = appt;
+    }
+
+    return { patient, appointment };
+  });
+
+// ── Get consultations for a patient ──────────────────────────────────────────
+export const getPatientConsultations = createServerFn({ method: "POST" })
+  .validator((d: { patientId: number }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const { data: rows, error } = await sb
+      .from("consultations")
+      .select("*")
+      .eq("patient_id", data.patientId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+// ── Save consultation ─────────────────────────────────────────────────────────
+export const saveConsultation = createServerFn({ method: "POST" })
+  .validator((d: {
+    patient_id: number;
+    appointment_id?: number | null;
+    doctor_username: string;
+    chief_complaint: string;
+    history_of_present_illness?: string;
+    blood_pressure?: string;
+    temperature?: string;
+    pulse_rate?: string;
+    weight?: string;
+    height?: string;
+    physical_examination?: string;
+    diagnosis: string;
+    treatment_plan?: string;
+    additional_notes?: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const now = new Date().toISOString();
+
+    // Insert consultation
+    const { data: consult, error: cErr } = await sb
+      .from("consultations")
+      .insert({ ...data, created_at: now, updated_at: now })
+      .select()
+      .single();
+    if (cErr) throw new Error(cErr.message);
+
+    // Mark appointment as completed
+    if (data.appointment_id) {
+      await sb
+        .from("appointments")
+        .update({ visit_status: "completed", updated_at: now })
+        .eq("id", data.appointment_id);
+    }
+
+    return consult;
+  });

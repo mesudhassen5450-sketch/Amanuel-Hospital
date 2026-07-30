@@ -30,6 +30,7 @@ function DoctorQueuePage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery]   = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const load = async (date?: string) => {
     setLoading(true);
@@ -40,7 +41,7 @@ function DoctorQueuePage() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(dateFilter); }, [dateFilter]);
+  useEffect(() => { load(dateFilter); }, [dateFilter, refreshKey]);
 
   const filtered = appts.filter(a => {
     const q = query.toLowerCase();
@@ -70,7 +71,7 @@ function DoctorQueuePage() {
               {sorted.filter(a => a.visitStatus === "checked_in").length} checked in
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => load(dateFilter)} disabled={loading} className="gap-2 rounded-xl">
+          <Button variant="outline" size="sm" onClick={() => setRefreshKey(k => k + 1)} disabled={loading} className="gap-2 rounded-xl">
             <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
         </div>

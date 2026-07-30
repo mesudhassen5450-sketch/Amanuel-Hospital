@@ -224,6 +224,8 @@ export const getPatientWithAppointment = createServerFn({ method: "POST" })
     if (pErr) throw new Error(pErr.message);
 
     let appointment = null;
+
+    // 1. Try by explicit appointmentId first
     if (data.appointmentId) {
       const { data: appt } = await sb
         .from("appointments")
@@ -231,16 +233,38 @@ export const getPatientWithAppointment = createServerFn({ method: "POST" })
         .eq("id", data.appointmentId)
         .single();
       appointment = appt;
-    } else {
-      // Get the most recent appointment for this patient
+    }
+
+    // 2. Try by patient_id (linked)
+    if (!appointment && patient?.id) {
       const { data: appt } = await sb
         .from("appointments")
         .select("*")
         .eq("patient_id", patient.id)
         .order("appointment_date", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       appointment = appt;
+    }
+
+    // 3. Try by full_name + phone (unlinked appointments from public booking)
+    if (!appointment && patient) {
+      const { data: appt } = await sb
+        .from("appointments")
+        .select("*")
+        .eq("full_name", patient.full_name)
+        .eq("phone", patient.phone)
+        .order("appointment_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      appointment = appt;
+      // Auto-link if found
+      if (appt) {
+        await sb
+          .from("appointments")
+          .update({ patient_id: patient.id, updated_at: new Date().toISOString() })
+          .eq("id", appt.id);
+      }
     }
 
     return { patient, appointment };

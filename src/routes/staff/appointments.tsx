@@ -36,7 +36,8 @@ function AppointmentsPage() {
   const [patients, setPatients]   = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
   const [query, setQuery]         = useState("");
-  const [dateFilter, setDateFilter] = useState(""); // empty = show all dates
+  const [dateFilter, setDateFilter] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [linkModal, setLinkModal] = useState<{ apptId: string; search: string } | null>(null);
 
   const load = async (date?: string) => {
@@ -52,7 +53,7 @@ function AppointmentsPage() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(dateFilter); }, [dateFilter]);
+  useEffect(() => { load(dateFilter); }, [dateFilter, refreshKey]);
 
   const handleStatus = async (id: string, visitStatus: string) => {
     try {
@@ -99,7 +100,7 @@ function AppointmentsPage() {
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">{filtered.length} appointment(s) shown</p>
           </div>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2 rounded-xl">
+          <Button variant="outline" size="sm" onClick={() => setRefreshKey(k => k + 1)} disabled={loading} className="gap-2 rounded-xl">
             <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
         </div>

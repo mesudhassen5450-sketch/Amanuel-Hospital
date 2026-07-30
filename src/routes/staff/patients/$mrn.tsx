@@ -2,14 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { StaffGuard } from "@/components/staff/StaffGuard";
 import { StaffLayout } from "@/components/staff/StaffLayout";
-import { getPatientByMRN } from "@/lib/staff-server";
+import { getPatientByMRN, getPatientConsultations } from "@/lib/staff-server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import {
   User, Phone, Calendar, MapPin, Heart, AlertTriangle,
-  Activity, ChevronLeft, Loader2, ClipboardList, Pencil
+  Activity, ChevronLeft, Loader2, ClipboardList, Pencil, Stethoscope
 } from "lucide-react";
 
 export const Route = createFileRoute("/staff/patients/$mrn")({
@@ -33,14 +33,28 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
 
 function PatientProfilePage() {
   const { mrn } = Route.useParams();
-  const [patient, setPatient] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState("");
+  const [patient, setPatient]             = useState<any>(null);
+  const [consultations, setConsultations] = useState<any[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState("");
 
   useEffect(() => {
-    getPatientByMRN({ data: { mrn } })
-      .then(p => { setPatient(p); setLoading(false); })
-      .catch(e => { setError(e.message); setLoading(false); });
+    (async () => {
+      setLoading(true);
+      try {
+        const p = await getPatientByMRN({ data: { mrn } }) as any;
+        setPatient(p);
+        // Fetch consultations using the patient's numeric id
+        if (p?.id) {
+          const c = await getPatientConsultations({ data: { patientId: p.id } });
+          setConsultations(c as any[]);
+        }
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [mrn]);
 
   if (loading) return (
@@ -135,18 +149,96 @@ function PatientProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Medical history placeholder */}
-          <Card className="border border-dashed border-border/60 rounded-2xl">
+          {/* Consultation History — live from Supabase */}
+          <Card className="lg:col-span-3 border border-border/60 rounded-2xl shadow-sm">
             <CardHeader className="pb-3 border-b border-border/40">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-muted-foreground" /> Medical History
+                <Stethoscope className="h-4 w-4 text-primary" />
+                Consultation History
+                <Badge variant="outline" className="ml-1 text-xs font-semibold bg-primary/5 border-primary/20 text-primary">
+                  {consultations.length}
+                </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="py-10 text-center text-muted-foreground">
-              <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No medical history recorded yet.</p>
-              <p className="text-xs mt-1">Will be available in a future phase.</p>
-            </CardContent>
+            {consultations.length === 0 ? (
+              <CardContent className="py-10 text-center text-muted-foreground">
+                <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No consultation history recorded yet.</p>
+              </CardContent>
+            ) : (
+              <CardContent className="pt-4 space-y-4">
+                {consultations.map(c => (
+                  <div key={c.id} className="border border-border/50 rounded-xl p-4 bg-secondary/10 space-y-3">
+                    {/* Header row */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <Stethoscope className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold text-foreground">
+                          {new Date(c.created_at).toLocaleDateString("en-US", {
+                            year: "numeric", month: "long", day: "numeric",
+                          })}
+                        </span>
+                      </div>
+                      <span className="text-xs text-muted-foreground capitalize">
+                        Dr. {c.doctor_username}
+                      </span>
+                    </div>
+
+                    {/* Main fields */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Chief Complaint</p>
+                        <p className="text-foreground">{c.chief_complaint}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Diagnosis</p>
+                        <p className="text-foreground font-medium">{c.diagnosis}</p>
+                      </div>
+                      {c.history_of_present_illness && (
+                        <div className="sm:col-span-2">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">History of Present Illness</p>
+                          <p className="text-foreground">{c.history_of_present_illness}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Vital signs */}
+                    {(c.blood_pressure || c.temperature || c.pulse_rate || c.weight || c.height) && (
+                      <div className="bg-background border border-border/40 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        {[
+                          ["Blood Pressure", c.blood_pressure],
+                          ["Temperature",    c.temperature],
+                          ["Pulse Rate",     c.pulse_rate],
+                          ["Weight",         c.weight],
+                          ["Height",         c.height],
+                        ].filter(([, v]) => v).map(([label, val]) => (
+                          <div key={label as string}>
+                            <p className="text-xs text-muted-foreground">{label}</p>
+                            <p className="text-sm font-semibold text-foreground">{val}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Treatment plan */}
+                    {c.treatment_plan && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Treatment Plan</p>
+                        <p className="text-sm text-foreground">{c.treatment_plan}</p>
+                      </div>
+                    )}
+
+                    {/* Additional notes */}
+                    {c.additional_notes && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Additional Notes</p>
+                        <p className="text-sm text-foreground">{c.additional_notes}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            )}
           </Card>
         </div>
       </StaffLayout>

@@ -324,3 +324,26 @@ export const saveConsultation = createServerFn({ method: "POST" })
 
     return consult;
   });
+
+// ── Confirm cash payment ──────────────────────────────────────────────────────
+export const confirmCashPayment = createServerFn({ method: "POST" })
+  .validator((d: { id: string }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    // Only confirm if payment_method is cash AND payment_status is pending
+    const { data: appt, error: fetchErr } = await sb
+      .from("appointments")
+      .select("id, payment_method, payment_status")
+      .eq("id", data.id)
+      .single();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (appt.payment_method !== "cash") throw new Error("Only cash payments can be confirmed here.");
+    if (appt.payment_status === "paid")  throw new Error("This payment is already confirmed.");
+
+    const { error: updateErr } = await sb
+      .from("appointments")
+      .update({ payment_status: "paid", updated_at: new Date().toISOString() })
+      .eq("id", data.id);
+    if (updateErr) throw new Error(updateErr.message);
+    return true;
+  });

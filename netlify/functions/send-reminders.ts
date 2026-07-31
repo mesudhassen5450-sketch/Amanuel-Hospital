@@ -71,7 +71,11 @@ export const handler = async (event: any) => {
         message: message,
       };
       if (identifierId && identifierId !== "your_identifier_id_here") {
-        body["from"] = identifierId;
+        if (identifierId.length < 15 || /^\d+$/.test(identifierId)) {
+          body["sender"] = identifierId;
+        } else {
+          body["from"] = identifierId;
+        }
       }
 
       const response = await fetch("https://api.afromessage.com/api/send", {

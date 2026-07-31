@@ -434,9 +434,13 @@ export const sendSmsReminder = createServerFn({ method: "POST" })
         to:      toPhone,
         message: message,
       };
-      // Only include 'from' if identifier is configured
+      // Map the identifier to 'sender' or 'from' depending on its format
       if (identifierId && identifierId !== "your_identifier_id_here") {
-        body["from"] = identifierId;
+        if (identifierId.length < 15 || /^\d+$/.test(identifierId)) {
+          body["sender"] = identifierId;
+        } else {
+          body["from"] = identifierId;
+        }
       }
 
       const response = await fetch("https://api.afromessage.com/api/send", {

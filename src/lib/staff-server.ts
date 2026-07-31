@@ -89,8 +89,7 @@ export const getReceptionAppointments = createServerFn({ method: "POST" })
       .from("appointments")
       .select("*, patients(id,mrn,full_name)")
       .order("appointment_date", { ascending: false })
-      .order("appointment_time", { ascending: true });
-    if (data.date) q = q.eq("appointment_date", data.date);
+      .order("appointment_time", { ascending: true });    if (data.date) q = q.eq("appointment_date", data.date);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
@@ -107,6 +106,10 @@ export const getReceptionAppointments = createServerFn({ method: "POST" })
       patientId:       r.patient_id ?? null,
       patientMRN:      r.patients?.mrn ?? null,
       createdAt:       r.created_at,
+      reminderSmsSent: r.reminder_sms_sent,
+      reminderSmsSentAt: r.reminder_sms_sent_at,
+      reminderSmsStatus: r.reminder_sms_status,
+      reminderSmsError: r.reminder_sms_error,
     }));
   });
 
@@ -115,9 +118,15 @@ export const updateVisitStatus = createServerFn({ method: "POST" })
   .validator((d: { id: string; visitStatus: string }) => d)
   .handler(async ({ data }) => {
     const sb = getSupabase();
+    const now = new Date().toISOString();
+    const updatePayload: any = { visit_status: data.visitStatus, updated_at: now };
+    if (data.visitStatus === "cancelled") {
+      updatePayload.reminder_sms_status = "not_required";
+    }
+
     const { error } = await sb
       .from("appointments")
-      .update({ visit_status: data.visitStatus, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return true;
@@ -346,4 +355,169 @@ export const confirmCashPayment = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (updateErr) throw new Error(updateErr.message);
     return true;
+  });
+
+// ── SMS: normalize Ethiopian phone number to E.164 (+2519XXXXXXXX) ────────────
+function normalizeEthiopianPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  // Already full international: 2519XXXXXXXX
+  if (digits.startsWith("251") && digits.length === 12) return "+" + digits;
+  // Local 09XXXXXXXX or 07XXXXXXXX
+  if ((digits.startsWith("09") || digits.startsWith("07")) && digits.length === 10) {
+    return "+251" + digits.slice(1);
+  }
+  // 9XXXXXXXX (9 digits, missing leading 0)
+  if ((digits.startsWith("9") || digits.startsWith("7")) && digits.length === 9) {
+    return "+251" + digits;
+  }
+  // Already has +
+  if (phone.startsWith("+")) return phone;
+  return "+" + digits;
+}
+
+// ── SMS: send one reminder via AfroMessage ────────────────────────────────────
+export const sendSmsReminder = createServerFn({ method: "POST" })
+  .validator((d: { appointmentId: string }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const now = new Date().toISOString();
+
+    // 1. Fetch appointment
+    const { data: appt, error: apptErr } = await sb
+      .from("appointments")
+      .select("id, full_name, phone, appointment_date, appointment_time, booking_status, reminder_sms_sent, reminder_sms_status")
+      .eq("id", data.appointmentId)
+      .single();
+    if (apptErr) throw new Error("Appointment not found: " + apptErr.message);
+
+    // 2. Eligibility checks
+    if (appt.booking_status === "cancelled") {
+      await sb.from("appointments").update({
+        reminder_sms_status: "not_required",
+        updated_at: now,
+      }).eq("id", data.appointmentId);
+      throw new Error("Appointment is cancelled. SMS not required.");
+    }
+    if (appt.reminder_sms_sent === true) {
+      throw new Error("Reminder already sent for this appointment.");
+    }
+
+    // 3. Read token SERVER-SIDE only — never reaches the browser
+    const token = process.env["AFROMESSAGE_API_TOKEN"];
+    const identifierId = process.env["AFROMESSAGE_IDENTIFIER_ID"] ?? "";
+    if (!token || token === "your_afromessage_api_token_here") {
+      // Mark as failed with a safe message
+      await sb.from("appointments").update({
+        reminder_sms_status: "failed",
+        reminder_sms_error: "SMS provider not configured. Add AFROMESSAGE_API_TOKEN.",
+        updated_at: now,
+      }).eq("id", data.appointmentId);
+      throw new Error("SMS provider not configured. Please add AFROMESSAGE_API_TOKEN to environment variables.");
+    }
+
+    // 4. Build message
+    const patientName = appt.full_name ?? "Patient";
+    const apptDate    = appt.appointment_date ?? "";
+    const apptTime    = appt.appointment_time ?? "";
+    const message = `Dear ${patientName}, this is a reminder from Dr. Amanuel Hospital. You have an appointment scheduled for ${apptDate} at ${apptTime}. Please arrive on time. Thank you.`;
+
+    // 5. Normalize phone
+    const toPhone = normalizeEthiopianPhone(appt.phone ?? "");
+
+    // 6. Call AfroMessage API (server-side only)
+    let smsSuccess = false;
+    let smsError   = "";
+    try {
+      const body: Record<string, string> = {
+        to:      toPhone,
+        message: message,
+      };
+      // Only include 'from' if identifier is configured
+      if (identifierId && identifierId !== "your_identifier_id_here") {
+        body["from"] = identifierId;
+      }
+
+      const response = await fetch("https://api.afromessage.com/api/send", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type":  "application/json",
+          "Accept":        "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (response.ok && (result?.acknowledge === "success" || result?.status === "success" || response.status === 200)) {
+        smsSuccess = true;
+      } else {
+        // Safe error — never include token
+        smsError = result?.response?.errors?.[0]
+          ?? result?.message
+          ?? result?.error
+          ?? `HTTP ${response.status}`;
+      }
+    } catch (fetchErr: any) {
+      smsError = fetchErr?.message ?? "Network error contacting SMS provider.";
+    }
+
+    // 7. Persist result
+    if (smsSuccess) {
+      await sb.from("appointments").update({
+        reminder_sms_sent:    true,
+        reminder_sms_sent_at: now,
+        reminder_sms_status:  "sent",
+        reminder_sms_error:   null,
+        updated_at:           now,
+      }).eq("id", data.appointmentId);
+      return { success: true, message: "SMS reminder sent successfully." };
+    } else {
+      await sb.from("appointments").update({
+        reminder_sms_sent:   false,
+        reminder_sms_status: "failed",
+        reminder_sms_error:  smsError,
+        updated_at:          now,
+      }).eq("id", data.appointmentId);
+      throw new Error("SMS failed: " + smsError);
+    }
+  });
+
+// ── SMS: send automated reminders for tomorrow ─────────────────────────────────
+export const sendAutomatedReminders = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const sb = getSupabase();
+    const now = new Date();
+    // Get tomorrow's date string (YYYY-MM-DD) in EAT (UTC+3)
+    const eatOffset = 3 * 60 * 60 * 1000;
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000 + eatOffset);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+    // Query appointments for tomorrow that haven't been sent yet and are not cancelled
+    const { data: appts, error } = await sb
+      .from("appointments")
+      .select("id")
+      .eq("appointment_date", tomorrowStr)
+      .neq("booking_status", "cancelled")
+      .eq("reminder_sms_sent", false);
+
+    if (error) {
+      throw new Error("Failed to fetch appointments: " + error.message);
+    }
+
+    const results = [];
+    for (const appt of appts ?? []) {
+      try {
+        const res = await sendSmsReminder({ data: { appointmentId: String(appt.id) } });
+        results.push({ id: appt.id, success: true, message: res.message });
+      } catch (err: any) {
+        results.push({ id: appt.id, success: false, error: err.message });
+      }
+    }
+
+    return {
+      dateChecked: tomorrowStr,
+      totalFound: appts?.length ?? 0,
+      results,
+    };
   });

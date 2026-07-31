@@ -2,13 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { StaffGuard } from "@/components/staff/StaffGuard";
 import { StaffLayout } from "@/components/staff/StaffLayout";
-import { getReceptionAppointments, updateVisitStatus, linkAppointmentToPatient, getPatients } from "@/lib/staff-server";
+import { getReceptionAppointments, updateVisitStatus, linkAppointmentToPatient, getPatients, sendSmsReminder } from "@/lib/staff-server";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Search, RefreshCcw, Loader2, CalendarDays, Link2 } from "lucide-react";
+import { Search, RefreshCcw, Loader2, CalendarDays, Link2, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/staff/appointments")({
@@ -31,6 +31,20 @@ const STATUS_LABEL: Record<string, string> = {
   completed: "Completed", cancelled: "Cancelled",
 };
 
+const SMS_STATUS_STYLE: Record<string, string> = {
+  pending:      "bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-400 dark:border-slate-500/30",
+  sent:         "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30",
+  failed:       "bg-destructive/10 text-destructive border-destructive/20",
+  not_required: "bg-muted text-muted-foreground border-muted-foreground/10",
+};
+
+const SMS_STATUS_LABEL: Record<string, string> = {
+  pending:      "Pending",
+  sent:         "Sent",
+  failed:       "Failed",
+  not_required: "Not Required",
+};
+
 function AppointmentsPage() {
   const [appts, setAppts]         = useState<any[]>([]);
   const [patients, setPatients]   = useState<any[]>([]);
@@ -39,6 +53,7 @@ function AppointmentsPage() {
   const [dateFilter, setDateFilter] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [linkModal, setLinkModal] = useState<{ apptId: string; search: string } | null>(null);
+  const [sendingSmsId, setSendingSmsId] = useState<string | null>(null);
 
   const load = async (date?: string) => {
     setLoading(true);
@@ -61,6 +76,20 @@ function AppointmentsPage() {
       toast.success(`Status updated to: ${STATUS_LABEL[visitStatus]}`);
       setAppts(prev => prev.map(a => a.id === id ? { ...a, visitStatus } : a));
     } catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleSendSms = async (id: string) => {
+    setSendingSmsId(id);
+    try {
+      const res = await sendSmsReminder({ data: { appointmentId: id } });
+      toast.success(res.message || "SMS reminder sent!");
+      await load(dateFilter);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send SMS reminder.");
+      await load(dateFilter);
+    } finally {
+      setSendingSmsId(null);
+    }
   };
 
   const handleLink = async (apptId: string, patientId: number) => {
@@ -137,6 +166,7 @@ function AppointmentsPage() {
                     <th className="px-4 py-3">Date / Time</th>
                     <th className="px-4 py-3">Payment</th>
                     <th className="px-4 py-3">MRN</th>
+                    <th className="px-4 py-3">SMS Reminder</th>
                     <th className="px-4 py-3">Visit Status</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
@@ -168,6 +198,39 @@ function AppointmentsPage() {
                             <Link2 className="h-3.5 w-3.5" /> Link
                           </Button>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col items-start gap-1">
+                          <Badge className={cn("rounded-full border text-xs font-semibold px-2.5", SMS_STATUS_STYLE[a.reminderSmsStatus || "pending"] ?? SMS_STATUS_STYLE.pending)}>
+                            {SMS_STATUS_LABEL[a.reminderSmsStatus || "pending"] ?? a.reminderSmsStatus}
+                          </Badge>
+                          {a.reminderSmsStatus === "sent" && a.reminderSmsSentAt && (
+                            <span className="text-[10px] text-muted-foreground mt-0.5">
+                              {new Date(a.reminderSmsSentAt).toLocaleDateString()} {new Date(a.reminderSmsSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                          {a.reminderSmsStatus === "failed" && a.reminderSmsError && (
+                            <span className="text-[10px] text-destructive max-w-[150px] truncate block mt-0.5" title={a.reminderSmsError}>
+                              {a.reminderSmsError}
+                            </span>
+                          )}
+                          {a.visitStatus !== "cancelled" && a.reminderSmsStatus !== "sent" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 text-[10px] px-2 rounded-lg mt-1 border-primary/30 text-primary hover:bg-primary/5 gap-1"
+                              onClick={() => handleSendSms(a.id)}
+                              disabled={sendingSmsId === a.id}
+                            >
+                              {sendingSmsId === a.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Send className="h-3 w-3" />
+                              )}
+                              Send Test
+                            </Button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <Badge className={cn("rounded-full border text-xs font-semibold px-2.5", STATUS_STYLE[a.visitStatus] ?? STATUS_STYLE.booked)}>

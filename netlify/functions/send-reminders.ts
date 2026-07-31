@@ -84,8 +84,21 @@ export const handler = async (event: any) => {
         body: JSON.stringify(body),
       });
 
-      const result = await response.json().catch(() => ({}));
-      const isSuccess = response.ok && (result?.acknowledge === "success" || result?.status === "success" || response.status === 200);
+      let responseText = "";
+      try {
+        responseText = await response.text();
+      } catch (e) {
+        responseText = "Could not read response body";
+      }
+
+      let result: any = null;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        // Not JSON
+      }
+
+      const isSuccess = response.ok && (result?.acknowledge === "success" || result?.status === "success" || result?.code === "success" || response.status === 200);
 
       if (isSuccess) {
         await sb.from("appointments").update({
@@ -97,14 +110,34 @@ export const handler = async (event: any) => {
         }).eq("id", apptId);
         console.log(`SMS sent successfully to appointment ${apptId}`);
       } else {
-        const smsError = result?.response?.errors?.[0] ?? result?.message ?? result?.error ?? `HTTP ${response.status}`;
+        let extractedError = "";
+        if (result) {
+          extractedError = result?.response?.errors?.[0]
+            ?? result?.message
+            ?? result?.error
+            ?? result?.description
+            ?? "";
+        }
+        
+        if (!extractedError && responseText) {
+          if (responseText.includes("<html") || responseText.includes("<HTML")) {
+            extractedError = `HTTP ${response.status} (HTML Error Page)`;
+          } else {
+            extractedError = responseText.length > 200 
+              ? responseText.substring(0, 200) + "..." 
+              : responseText;
+          }
+        }
+        
+        const smsError = extractedError || `HTTP ${response.status} Error`;
+
         await sb.from("appointments").update({
           reminder_sms_sent: false,
           reminder_sms_status: "failed",
           reminder_sms_error: smsError,
           updated_at: runTimestamp,
         }).eq("id", apptId);
-        console.error(`SMS failed for appointment ${apptId}: ${smsError}`);
+        console.error(`SMS failed for appointment ${apptId}: ${smsError}. Response text: ${responseText}`);
       }
     } catch (fetchErr: any) {
       const smsError = fetchErr?.message ?? "Network error contacting SMS provider.";

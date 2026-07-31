@@ -82,7 +82,11 @@ function AppointmentsPage() {
     setSendingSmsId(id);
     try {
       const res = await sendSmsReminder({ data: { appointmentId: id } });
-      toast.success(res.message || "SMS reminder sent!");
+      if (res && res.success) {
+        toast.success(res.message || "SMS reminder sent!");
+      } else {
+        toast.error(res?.error || "Failed to send SMS reminder.");
+      }
       await load(dateFilter);
     } catch (e: any) {
       toast.error(e.message || "Failed to send SMS reminder.");

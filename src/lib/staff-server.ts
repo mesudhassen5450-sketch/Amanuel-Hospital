@@ -388,7 +388,9 @@ export const sendSmsReminder = createServerFn({ method: "POST" })
       .select("id, full_name, phone, appointment_date, appointment_time, booking_status, reminder_sms_sent, reminder_sms_status")
       .eq("id", data.appointmentId)
       .single();
-    if (apptErr) throw new Error("Appointment not found: " + apptErr.message);
+    if (apptErr) {
+      return { success: false, error: "Appointment not found: " + apptErr.message };
+    }
 
     // 2. Eligibility checks
     if (appt.booking_status === "cancelled") {
@@ -396,10 +398,10 @@ export const sendSmsReminder = createServerFn({ method: "POST" })
         reminder_sms_status: "not_required",
         updated_at: now,
       }).eq("id", data.appointmentId);
-      throw new Error("Appointment is cancelled. SMS not required.");
+      return { success: false, error: "Appointment is cancelled. SMS not required." };
     }
     if (appt.reminder_sms_sent === true) {
-      throw new Error("Reminder already sent for this appointment.");
+      return { success: false, error: "Reminder already sent for this appointment." };
     }
 
     // 3. Read token SERVER-SIDE only — never reaches the browser
@@ -412,7 +414,7 @@ export const sendSmsReminder = createServerFn({ method: "POST" })
         reminder_sms_error: "SMS provider not configured. Add AFROMESSAGE_API_TOKEN.",
         updated_at: now,
       }).eq("id", data.appointmentId);
-      throw new Error("SMS provider not configured. Please add AFROMESSAGE_API_TOKEN to environment variables.");
+      return { success: false, error: "SMS provider not configured. Please add AFROMESSAGE_API_TOKEN to environment variables." };
     }
 
     // 4. Build message
@@ -447,19 +449,54 @@ export const sendSmsReminder = createServerFn({ method: "POST" })
         body: JSON.stringify(body),
       });
 
-      const result = await response.json().catch(() => ({}));
+      let responseText = "";
+      try {
+        responseText = await response.text();
+      } catch (e) {
+        responseText = "Could not read response body";
+      }
 
-      if (response.ok && (result?.acknowledge === "success" || result?.status === "success" || response.status === 200)) {
+      let result: any = null;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        // Not JSON
+      }
+
+      if (response.ok && (result?.acknowledge === "success" || result?.status === "success" || result?.code === "success" || response.status === 200)) {
         smsSuccess = true;
       } else {
-        // Safe error — never include token
-        smsError = result?.response?.errors?.[0]
-          ?? result?.message
-          ?? result?.error
-          ?? `HTTP ${response.status}`;
+        let extractedError = "";
+        if (result) {
+          extractedError = result?.response?.errors?.[0]
+            ?? result?.message
+            ?? result?.error
+            ?? result?.description
+            ?? "";
+        }
+        
+        if (!extractedError && responseText) {
+          if (responseText.includes("<html") || responseText.includes("<HTML")) {
+            extractedError = `HTTP ${response.status} (HTML Error Page)`;
+          } else {
+            extractedError = responseText.length > 200 
+              ? responseText.substring(0, 200) + "..." 
+              : responseText;
+          }
+        }
+        
+        smsError = extractedError || `HTTP ${response.status} Error`;
+
+        console.error("AfroMessage API Send Error:", {
+          status: response.status,
+          statusText: response.statusText,
+          responseText: responseText,
+          requestBody: { to: toPhone, messageLength: message.length }
+        });
       }
     } catch (fetchErr: any) {
       smsError = fetchErr?.message ?? "Network error contacting SMS provider.";
+      console.error("Fetch Error in sendSmsReminder:", fetchErr);
     }
 
     // 7. Persist result
@@ -479,7 +516,7 @@ export const sendSmsReminder = createServerFn({ method: "POST" })
         reminder_sms_error:  smsError,
         updated_at:          now,
       }).eq("id", data.appointmentId);
-      throw new Error("SMS failed: " + smsError);
+      return { success: false, error: smsError };
     }
   });
 
@@ -509,7 +546,11 @@ export const sendAutomatedReminders = createServerFn({ method: "POST" })
     for (const appt of appts ?? []) {
       try {
         const res = await sendSmsReminder({ data: { appointmentId: String(appt.id) } });
-        results.push({ id: appt.id, success: true, message: res.message });
+        if (res.success) {
+          results.push({ id: appt.id, success: true, message: res.message });
+        } else {
+          results.push({ id: appt.id, success: false, error: res.error });
+        }
       } catch (err: any) {
         results.push({ id: appt.id, success: false, error: err.message });
       }

@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import {
   User, Phone, Calendar, MapPin, Heart, AlertTriangle, Activity,
   ChevronLeft, Loader2, ClipboardList, Stethoscope, CheckCircle2,
-  Clock, CreditCard, BadgeCheck, FlaskConical, TestTube,
+  Clock, FlaskConical, TestTube,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,8 +48,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
   );
 }
 
-const VISIT_STYLE: Record<string, string> = {
-  booked:     "bg-blue-500/10 text-blue-600 border-blue-500/20",
+const VISIT_STYLE: Record<string, string> = {  booked:     "bg-blue-500/10 text-blue-600 border-blue-500/20",
   checked_in: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   waiting:    "bg-amber-500/10 text-amber-600 border-amber-500/20",
   completed:  "bg-green-600/10 text-green-700 border-green-600/20",
@@ -310,11 +309,9 @@ function DoctorPatientPage() {
                     <Calendar className="h-4 w-4 text-primary" /> Appointment Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
-                  <InfoRow icon={Calendar}  label="Date"           value={appointment.appointment_date} />
-                  <InfoRow icon={Clock}     label="Time"           value={appointment.appointment_time} />
-                  <InfoRow icon={CreditCard} label="Payment Method" value={METHOD_LABEL[appointment.payment_method] ?? appointment.payment_method} />
-                  <InfoRow icon={BadgeCheck} label="Payment Status" value={appointment.payment_status} />
+                <CardContent className="pt-5 grid grid-cols-2 sm:grid-cols-2 gap-5">
+                  <InfoRow icon={Calendar} label="Date"         value={appointment.appointment_date} />
+                  <InfoRow icon={Clock}    label="Time"         value={appointment.appointment_time} />
                 </CardContent>
               </Card>
             )}

@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { StaffGuard } from "@/components/staff/StaffGuard";
 import { StaffLayout } from "@/components/staff/StaffLayout";
 import { getAllLabResults } from "@/lib/staff-server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, TestTube, Search, RefreshCcw } from "lucide-react";
+import { Loader2, TestTube, Search, RefreshCcw, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/staff/doctor/lab-results")({
@@ -83,6 +83,7 @@ function DoctorLabResultsPage() {
                     <th className="px-4 py-3">Unit</th>
                     <th className="px-4 py-3">Notes</th>
                     <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
@@ -99,6 +100,20 @@ function DoctorLabResultsPage() {
                       <td className="px-4 py-3 text-muted-foreground max-w-[150px] truncate">{r.notes ?? "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                         {new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {r.patients?.mrn && (
+                          <Link
+                            to="/staff/doctor/patient/$mrn"
+                            params={{ mrn: r.patients.mrn }}
+                            search={{ appointmentId: undefined }}
+                          >
+                            <Button size="sm" variant="outline"
+                              className="h-7 text-xs rounded-lg border-primary/30 text-primary hover:bg-primary/5 gap-1 px-2.5">
+                              <Eye className="h-3.5 w-3.5" /> View Patient
+                            </Button>
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   ))}

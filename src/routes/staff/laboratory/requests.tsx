@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { StaffGuard } from "@/components/staff/StaffGuard";
 import { StaffLayout } from "@/components/staff/StaffLayout";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { FlaskConical, Search, RefreshCcw, Loader2, CheckCircle2, X } from "lucide-react";
+import { FlaskConical, Search, RefreshCcw, Loader2, CheckCircle2, X, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/staff/laboratory/requests")({
@@ -157,14 +157,25 @@ function LabRequestsPage() {
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Notes</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
+                    <th className="px-4 py-3 text-right">Actions</th>                  </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
                   {filtered.map(r => (
                     <tr key={r.id} className="hover:bg-secondary/10 transition-colors">
                       <td className="px-4 py-3">
-                        <p className="font-semibold text-foreground">{r.patient?.full_name ?? "—"}</p>
+                        {r.patient?.mrn ? (
+                          <Link
+                            to="/staff/laboratory/patient/$mrn"
+                            params={{ mrn: r.patient.mrn }}
+                            className="group"
+                          >
+                            <p className="font-semibold text-primary hover:underline underline-offset-2 transition-colors">
+                              {r.patient?.full_name ?? "—"}
+                            </p>
+                          </Link>
+                        ) : (
+                          <p className="font-semibold text-foreground">{r.patient?.full_name ?? "—"}</p>
+                        )}
                         <p className="text-xs font-mono text-primary">{r.patient?.mrn ?? "—"}</p>
                         <p className="text-xs text-muted-foreground">{r.patient?.phone ?? "—"}</p>
                       </td>
@@ -183,6 +194,17 @@ function LabRequestsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {r.patient?.mrn && (
+                            <Link
+                              to="/staff/laboratory/patient/$mrn"
+                              params={{ mrn: r.patient.mrn }}
+                            >
+                              <Button size="sm" variant="outline"
+                                className="h-7 text-xs rounded-lg border-primary/30 text-primary hover:bg-primary/5 gap-1 px-2.5">
+                                <Eye className="h-3.5 w-3.5" /> View
+                              </Button>
+                            </Link>
+                          )}
                           {r.status === "Requested" && (
                             <Button size="sm" className="h-7 text-xs rounded-lg bg-amber-500 hover:bg-amber-600 text-white px-2.5"
                               onClick={() => handleStatusChange(r.id, "Sample Collected")}>

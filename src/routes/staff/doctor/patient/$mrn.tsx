@@ -7,6 +7,8 @@ import {
   getPatientWithAppointment,
   getPatientConsultations,
   saveConsultation,
+  createLabRequest,
+  getPatientLabResults,
 } from "@/lib/staff-server";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +20,7 @@ import { toast } from "sonner";
 import {
   User, Phone, Calendar, MapPin, Heart, AlertTriangle, Activity,
   ChevronLeft, Loader2, ClipboardList, Stethoscope, CheckCircle2,
-  Clock, CreditCard, BadgeCheck,
+  Clock, CreditCard, BadgeCheck, FlaskConical, TestTube,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -67,10 +69,30 @@ function DoctorPatientPage() {
   const [patient, setPatient]         = useState<any>(null);
   const [appointment, setAppointment] = useState<any>(null);
   const [consultations, setConsultations] = useState<any[]>([]);
+  const [labResults, setLabResults]   = useState<any[]>([]);
   const [loading, setLoading]         = useState(true);
   const [saving, setSaving]           = useState(false);
   const [saved, setSaved]             = useState(false);
-  const [activeTab, setActiveTab]     = useState<"profile" | "history" | "new">("profile");
+  const [activeTab, setActiveTab]     = useState<"profile" | "history" | "new" | "lab">("profile");
+
+  // Lab request form state
+  const LAB_TESTS = [
+    "Complete Blood Count (CBC)",
+    "Blood Sugar (RBS/FBS)",
+    "Urinalysis",
+    "Lipid Profile",
+    "Liver Function Test (LFT)",
+    "Kidney Function Test (KFT)",
+    "Malaria Test (RDT/Smear)",
+    "Thyroid Panel (TSH/T3/T4)",
+    "HIV Screening",
+    "Hepatitis B & C",
+    "Stool Exam",
+    "Sputum AFB (TB Test)",
+    "Other",
+  ];
+  const [labForm, setLabForm]   = useState({ test_name: "", clinical_notes: "" });
+  const [labSaving, setLabSaving] = useState(false);
 
   // Consultation form state
   const [form, setForm] = useState({
@@ -92,14 +114,18 @@ function DoctorPatientPage() {
     (async () => {
       setLoading(true);
       try {
-        const { patient: p, appointment: a } = await getPatientWithAppointment({
+        const p = await getPatientWithAppointment({
           data: { mrn, appointmentId },
         }) as any;
-        setPatient(p);
-        setAppointment(a);
-        if (p?.id) {
-          const c = await getPatientConsultations({ data: { patientId: p.id } });
+        setPatient(p.patient);
+        setAppointment(p.appointment);
+        if (p.patient?.id) {
+          const [c, lr] = await Promise.all([
+            getPatientConsultations({ data: { patientId: p.patient.id } }),
+            getPatientLabResults({ data: { patientId: p.patient.id } }),
+          ]);
           setConsultations(c as any[]);
+          setLabResults(lr as any[]);
         }
       } catch (e: any) {
         toast.error(e.message);
@@ -109,8 +135,33 @@ function DoctorPatientPage() {
     })();
   }, [mrn, appointmentId]);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleLabRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!labForm.test_name) { toast.error("Please select a test."); return; }
+    setLabSaving(true);
+    try {
+      await createLabRequest({
+        data: {
+          patient_id:      patient.id,
+          appointment_id:  appointment?.id ?? null,
+          doctor_username: user?.username ?? "doctor",
+          test_name:       labForm.test_name,
+          clinical_notes:  labForm.clinical_notes || undefined,
+        },
+      });
+      toast.success(`Lab request for "${labForm.test_name}" submitted to laboratory.`);
+      setLabForm({ test_name: "", clinical_notes: "" });
+      // Refresh lab results list
+      const lr = await getPatientLabResults({ data: { patientId: patient.id } });
+      setLabResults(lr as any[]);
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to submit lab request.");
+    } finally {
+      setLabSaving(false);
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {    e.preventDefault();
     if (!form.chief_complaint.trim()) { toast.error("Chief complaint is required."); return; }
     if (!form.diagnosis.trim())       { toast.error("Diagnosis is required."); return; }
     if (saved) { toast.error("Consultation already saved for this session."); return; }
@@ -196,11 +247,12 @@ function DoctorPatientPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-secondary/40 rounded-2xl p-1 mb-6 w-fit">
+        <div className="flex gap-1 bg-secondary/40 rounded-2xl p-1 mb-6 flex-wrap w-fit">
           {([
-            { key: "profile", label: "Patient Info",    icon: User },
-            { key: "history", label: `History (${consultations.length})`, icon: ClipboardList },
-            { key: "new",     label: "New Consultation", icon: Stethoscope },
+            { key: "profile", label: "Patient Info",                       icon: User },
+            { key: "history", label: `History (${consultations.length})`,  icon: ClipboardList },
+            { key: "new",     label: "New Consultation",                    icon: Stethoscope },
+            { key: "lab",     label: `Laboratory (${labResults.length})`,   icon: FlaskConical },
           ] as const).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -437,6 +489,114 @@ function DoctorPatientPage() {
               </Button>
             </div>
           </form>
+        )}
+
+        {/* ── LAB TAB ──────────────────────────────────────────────────────── */}
+        {activeTab === "lab" && (
+          <div className="max-w-4xl space-y-6">
+            {/* Request new test */}
+            <Card className="border border-border/60 rounded-2xl shadow-sm">
+              <CardHeader className="pb-3 border-b border-border/40">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <FlaskConical className="h-4 w-4 text-primary" /> Request Laboratory Test
+                </CardTitle>
+              </CardHeader>
+              <form onSubmit={handleLabRequest}>
+                <CardContent className="pt-5 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-sm">
+                      Test Name <span className="text-destructive">*</span>
+                    </Label>
+                    <select
+                      value={labForm.test_name}
+                      onChange={e => setLabForm(f => ({ ...f, test_name: e.target.value }))}
+                      className="w-full h-11 px-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">Select a test...</option>
+                      {LAB_TESTS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-sm">Clinical Notes</Label>
+                    <Textarea
+                      value={labForm.clinical_notes}
+                      onChange={e => setLabForm(f => ({ ...f, clinical_notes: e.target.value }))}
+                      placeholder="Reason for test, relevant symptoms, urgency..."
+                      rows={2} className="rounded-xl resize-none"
+                    />
+                  </div>
+                  <Button type="submit" disabled={labSaving} className="gap-2 rounded-xl">
+                    {labSaving
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Submitting...</>
+                      : <><FlaskConical className="h-4 w-4" /> Submit Lab Request</>
+                    }
+                  </Button>
+                </CardContent>
+              </form>
+            </Card>
+
+            {/* Lab results for this patient */}
+            <div>
+              <h3 className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
+                <TestTube className="h-4 w-4 text-primary" />
+                Lab Results for This Patient
+              </h3>
+              {labResults.length === 0 ? (
+                <Card className="border border-dashed border-border/60 rounded-2xl">
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    <TestTube className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm font-medium">No laboratory results yet.</p>
+                    <p className="text-xs mt-1">Results will appear here once the lab team completes the tests.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {labResults.map((r: any) => (
+                    <Card key={r.id} className="border border-border/60 rounded-2xl shadow-sm">
+                      <CardContent className="p-5">
+                        <div className="flex items-start justify-between flex-wrap gap-3 mb-3">
+                          <div>
+                            <p className="font-bold text-foreground">{r.lab_requests?.test_name ?? "Unknown Test"}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Requested by Dr. {r.lab_requests?.doctor_username ?? "—"} ·{" "}
+                              {new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </p>
+                          </div>
+                          <Badge className="bg-green-600/10 text-green-700 border-green-600/20 border rounded-full text-xs font-semibold px-2.5">
+                            Completed
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-secondary/20 rounded-xl p-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Result</p>
+                            <p className="text-sm font-bold text-foreground">{r.result_value} {r.unit}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Reference</p>
+                            <p className="text-sm font-medium">{r.reference_range}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Unit</p>
+                            <p className="text-sm font-medium">{r.unit}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Technician</p>
+                            <p className="text-sm font-medium capitalize">{r.technician_id}</p>
+                          </div>
+                          {r.notes && (
+                            <div className="col-span-2 sm:col-span-4">
+                              <p className="text-xs text-muted-foreground">Notes</p>
+                              <p className="text-sm">{r.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </StaffLayout>
     </StaffGuard>

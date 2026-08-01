@@ -24,7 +24,11 @@ function StaffLoginPage() {
   // Wait for hydration before checking auth
   useEffect(() => {
     if (hydrated && isAuthenticated) {
-      window.location.href = "/staff/dashboard";
+      const storedRaw = sessionStorage.getItem("staff_session");
+      const role = storedRaw ? JSON.parse(storedRaw).role : null;
+      if (role === "doctor")          window.location.href = "/staff/doctor/dashboard";
+      else if (role === "laboratory") window.location.href = "/staff/laboratory/dashboard";
+      else                            window.location.href = "/staff/dashboard";
     }
   }, [hydrated, isAuthenticated]);
 
@@ -46,7 +50,12 @@ function StaffLoginPage() {
     const ok = login(username.trim().toLowerCase(), password);
     setLoading(false);
     if (ok) {
-      window.location.href = "/staff/dashboard";
+      // Role-based redirect
+      const storedRaw = sessionStorage.getItem("staff_session");
+      const role = storedRaw ? JSON.parse(storedRaw).role : null;
+      if (role === "doctor")     { window.location.href = "/staff/doctor/dashboard"; }
+      else if (role === "laboratory") { window.location.href = "/staff/laboratory/dashboard"; }
+      else                       { window.location.href = "/staff/dashboard"; }
     } else {
       setError("Invalid username or password. Please try again.");
     }

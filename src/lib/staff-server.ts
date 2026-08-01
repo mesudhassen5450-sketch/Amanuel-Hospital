@@ -566,3 +566,139 @@ export const sendAutomatedReminders = createServerFn({ method: "POST" })
       results,
     };
   });
+
+// ════════════════════════════════════════════════════════════
+// PHASE 6 — LABORATORY SERVER FUNCTIONS
+// ════════════════════════════════════════════════════════════
+
+// ── Lab: dashboard stats ──────────────────────────────────────────────────────
+export const getLabDashboardStats = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const sb = getSupabase();
+    const today = new Date().toISOString().split("T")[0];
+    const { data: all, error } = await sb
+      .from("lab_requests")
+      .select("id,status,created_at");
+    if (error) throw new Error(error.message);
+    const rows = all ?? [];
+    const todayRows = rows.filter((r: any) => r.created_at?.startsWith(today));
+    return {
+      todayRequests: todayRows.length,
+      pending:       rows.filter((r: any) => r.status === "Requested").length,
+      processing:    rows.filter((r: any) => r.status === "Processing" || r.status === "Sample Collected").length,
+      completed:     rows.filter((r: any) => r.status === "Completed").length,
+    };
+  });
+
+// ── Lab: get all requests ─────────────────────────────────────────────────────
+export const getLabRequests = createServerFn({ method: "POST" })
+  .validator((d: { status?: string }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    let q = sb
+      .from("lab_requests")
+      .select("*, patients(id,mrn,full_name,phone)")
+      .order("created_at", { ascending: false });
+    if (data.status) q = q.eq("status", data.status);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({
+      id:             r.id,
+      patientId:      r.patient_id,
+      appointmentId:  r.appointment_id,
+      doctorUsername: r.doctor_username,
+      testName:       r.test_name,
+      clinicalNotes:  r.clinical_notes,
+      status:         r.status,
+      createdAt:      r.created_at,
+      patient:        r.patients ?? null,
+    }));
+  });
+
+// ── Lab: update request status ────────────────────────────────────────────────
+export const updateLabRequestStatus = createServerFn({ method: "POST" })
+  .validator((d: { id: number; status: string }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const { error } = await sb
+      .from("lab_requests")
+      .update({ status: data.status, updated_at: new Date().toISOString() })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return true;
+  });
+
+// ── Lab: save result (+ complete request) ─────────────────────────────────────
+export const saveLabResult = createServerFn({ method: "POST" })
+  .validator((d: {
+    lab_request_id: number;
+    patient_id: number;
+    technician_id: string;
+    result_value: string;
+    reference_range: string;
+    unit: string;
+    notes?: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const now = new Date().toISOString();
+    const { data: result, error: rErr } = await sb
+      .from("lab_results")
+      .insert({ ...data, created_at: now, updated_at: now })
+      .select()
+      .single();
+    if (rErr) throw new Error(rErr.message);
+    // Mark request as Completed
+    await sb
+      .from("lab_requests")
+      .update({ status: "Completed", updated_at: now })
+      .eq("id", data.lab_request_id);
+    return result;
+  });
+
+// ── Lab: get results for a patient ────────────────────────────────────────────
+export const getPatientLabResults = createServerFn({ method: "POST" })
+  .validator((d: { patientId: number }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const { data: rows, error } = await sb
+      .from("lab_results")
+      .select("*, lab_requests(id,test_name,clinical_notes,doctor_username,status,created_at)")
+      .eq("patient_id", data.patientId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+// ── Lab: create request ───────────────────────────────────────────────────────
+export const createLabRequest = createServerFn({ method: "POST" })
+  .validator((d: {
+    patient_id: number;
+    appointment_id?: number | null;
+    doctor_username: string;
+    test_name: string;
+    clinical_notes?: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const now = new Date().toISOString();
+    const { data: req, error } = await sb
+      .from("lab_requests")
+      .insert({ ...data, status: "Requested", created_at: now, updated_at: now })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return req;
+  });
+
+// ── Lab: get all results (for doctor/admin view) ──────────────────────────────
+export const getAllLabResults = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const sb = getSupabase();
+    const { data: rows, error } = await sb
+      .from("lab_results")
+      .select("*, patients(id,mrn,full_name), lab_requests(id,test_name,doctor_username,created_at)")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });

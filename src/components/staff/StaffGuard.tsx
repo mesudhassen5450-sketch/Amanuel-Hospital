@@ -2,17 +2,30 @@ import { type ReactNode, useEffect } from "react";
 import { useStaffAuth } from "@/lib/staff-auth";
 import { Loader2 } from "lucide-react";
 
-export function StaffGuard({ children }: { children: ReactNode }) {
-  const { isAuthenticated, hydrated } = useStaffAuth();
+interface StaffGuardProps {
+  children: ReactNode;
+  /** Restrict to specific roles. If omitted, any authenticated user can access. */
+  allowedRoles?: string[];
+}
+
+export function StaffGuard({ children, allowedRoles }: StaffGuardProps) {
+  const { isAuthenticated, hydrated, user } = useStaffAuth();
 
   useEffect(() => {
-    // Only redirect AFTER client hydration — never during SSR
-    if (hydrated && !isAuthenticated) {
+    if (!hydrated) return;
+    if (!isAuthenticated) {
       window.location.href = "/staff/login";
+      return;
     }
-  }, [hydrated, isAuthenticated]);
+    // Role check
+    if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
+      // Redirect to their home dashboard
+      if (user.role === "doctor")          window.location.href = "/staff/doctor/dashboard";
+      else if (user.role === "laboratory") window.location.href = "/staff/laboratory/dashboard";
+      else                                 window.location.href = "/staff/dashboard";
+    }
+  }, [hydrated, isAuthenticated, user, allowedRoles]);
 
-  // Still hydrating from sessionStorage — show spinner, don't redirect yet
   if (!hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground gap-2">
@@ -22,8 +35,8 @@ export function StaffGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  // Hydrated but not logged in — redirect is firing via useEffect
   if (!isAuthenticated) return null;
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) return null;
 
   return <>{children}</>;
 }

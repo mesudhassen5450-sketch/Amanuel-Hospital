@@ -2,7 +2,7 @@ import { type ReactNode, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, CalendarDays, CreditCard, LogOut,
-  Stethoscope, Menu, X, Clock, ClipboardList,
+  Stethoscope, Menu, X, Clock, ClipboardList, FlaskConical, TestTube,
 } from "lucide-react";
 import { useStaffAuth } from "@/lib/staff-auth";
 import { cn } from "@/lib/utils";
@@ -17,10 +17,16 @@ const RECEPTION_NAV = [
 ];
 
 const DOCTOR_NAV = [
-  { to: "/staff/doctor/dashboard", label: "Doctor Dashboard", icon: LayoutDashboard },
-  { to: "/staff/doctor/queue",     label: "Waiting Patients",  icon: Clock },
-  { to: "/staff/patients",         label: "Patient Records",   icon: Users },
-  { to: "/staff/doctor/queue",     label: "Consultations",     icon: ClipboardList },
+  { to: "/staff/doctor/dashboard",    label: "Doctor Dashboard",  icon: LayoutDashboard },
+  { to: "/staff/doctor/queue",        label: "Waiting Patients",  icon: Clock },
+  { to: "/staff/patients",            label: "Patient Records",   icon: Users },
+  { to: "/staff/doctor/lab-results",  label: "Lab Results",       icon: TestTube },
+];
+
+const LABORATORY_NAV = [
+  { to: "/staff/laboratory/dashboard", label: "Lab Dashboard",    icon: LayoutDashboard },
+  { to: "/staff/laboratory/requests",  label: "Lab Requests",     icon: FlaskConical },
+  { to: "/staff/laboratory/results",   label: "Results",          icon: TestTube },
 ];
 
 export function StaffLayout({ children }: { children: ReactNode }) {
@@ -29,7 +35,9 @@ export function StaffLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   const isDoctor = user?.role === "doctor";
-  const NAV = isDoctor ? DOCTOR_NAV : RECEPTION_NAV;
+  const isLab    = user?.role === "laboratory";
+  const NAV = isDoctor ? DOCTOR_NAV : isLab ? LABORATORY_NAV : RECEPTION_NAV;
+  const portalLabel = isDoctor ? "Doctor Portal" : isLab ? "Lab Portal" : "Staff Portal";
 
   const handleLogout = () => {
     logout();
@@ -53,7 +61,7 @@ export function StaffLayout({ children }: { children: ReactNode }) {
           <div>
             <p className="text-sm font-bold text-foreground leading-tight">Dr. Amanuel</p>
             <p className="text-[11px] text-muted-foreground capitalize">
-              {isDoctor ? "Doctor Portal" : "Staff Portal"}
+              {portalLabel}
             </p>
           </div>
         </div>

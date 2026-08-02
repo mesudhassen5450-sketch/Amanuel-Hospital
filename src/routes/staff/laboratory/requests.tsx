@@ -40,6 +40,7 @@ function LabRequestsPage() {
   const [refreshKey, setRefreshKey]     = useState(0);
   const [resultModal, setResultModal]   = useState<ResultModal>(null);
   const [submitting, setSubmitting]     = useState(false);
+  const [viewDetail, setViewDetail]     = useState<any | null>(null); // for unlinked requests
 
   // Result form state
   const [resultForm, setResultForm] = useState({
@@ -194,7 +195,7 @@ function LabRequestsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {r.patient?.mrn && (
+                          {r.patient?.mrn ? (
                             <Link
                               to="/staff/laboratory/patient/$mrn"
                               params={{ mrn: r.patient.mrn }}
@@ -204,6 +205,12 @@ function LabRequestsPage() {
                                 <Eye className="h-3.5 w-3.5" /> View
                               </Button>
                             </Link>
+                          ) : (
+                            <Button size="sm" variant="outline"
+                              className="h-7 text-xs rounded-lg border-primary/30 text-primary hover:bg-primary/5 gap-1 px-2.5"
+                              onClick={() => setViewDetail(r)}>
+                              <Eye className="h-3.5 w-3.5" /> View
+                            </Button>
                           )}
                           {r.status === "Requested" && (
                             <Button size="sm" className="h-7 text-xs rounded-lg bg-amber-500 hover:bg-amber-600 text-white px-2.5"
@@ -295,6 +302,58 @@ function LabRequestsPage() {
                   </Button>
                 </div>
               </form>
+            </Card>
+          </div>
+        )}
+        {/* Inline request detail panel — for requests without a linked patient/MRN */}
+        {viewDetail && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <Card className="w-full max-w-lg rounded-2xl shadow-2xl border border-border bg-card">
+              <CardHeader className="pb-3 border-b border-border/40 flex flex-row items-center justify-between">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <FlaskConical className="h-4 w-4 text-primary" />
+                  Lab Request Details
+                </CardTitle>
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setViewDetail(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="pt-5 space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Test Name</p>
+                    <p className="font-semibold text-foreground">{viewDetail.testName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Status</p>
+                    <Badge className={cn("rounded-full border text-xs font-semibold px-2.5", STATUS_STYLE[viewDetail.status])}>
+                      {viewDetail.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Requesting Doctor</p>
+                    <p className="font-medium capitalize">{viewDetail.doctorUsername}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Request Date</p>
+                    <p className="font-medium">{new Date(viewDetail.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground mb-0.5">Clinical Notes</p>
+                    <p className="font-medium">{viewDetail.clinicalNotes || "—"}</p>
+                  </div>
+                  <div className="col-span-2 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                    <p className="text-xs text-amber-700 font-semibold">
+                      ⚠ This request has no linked patient record. Ask reception to register and link the patient to view full profile.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+              <div className="px-6 py-4 border-t border-border/40">
+                <Button variant="outline" className="w-full rounded-xl" onClick={() => setViewDetail(null)}>
+                  Close
+                </Button>
+              </div>
             </Card>
           </div>
         )}

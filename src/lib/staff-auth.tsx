@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
-export type StaffRole = "staff" | "reception" | "doctor" | "laboratory" | null;
+export type StaffRole = "staff" | "reception" | "doctor" | "laboratory" | "pharmacy" | null;
 
 interface StaffUser {
   username: string;
@@ -20,6 +20,7 @@ const STAFF_CREDENTIALS: Record<string, { password: string; role: StaffRole }> =
   reception:  { password: "4321", role: "reception" },
   doctor:     { password: "4321", role: "doctor" },
   laboratory: { password: "4321", role: "laboratory" },
+  pharmacy:   { password: "4321", role: "pharmacy" },
 };
 
 const SESSION_KEY = "staff_session";

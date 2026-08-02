@@ -2,7 +2,7 @@ import { type ReactNode, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, CalendarDays, CreditCard, LogOut,
-  Stethoscope, Menu, X, Clock, ClipboardList, FlaskConical, TestTube,
+  Stethoscope, Menu, X, Clock, ClipboardList, FlaskConical, TestTube, Pill, CheckCircle2, Package,
 } from "lucide-react";
 import { useStaffAuth } from "@/lib/staff-auth";
 import { cn } from "@/lib/utils";
@@ -29,15 +29,23 @@ const LABORATORY_NAV = [
   { to: "/staff/laboratory/results",   label: "Results",          icon: TestTube },
 ];
 
+const PHARMACY_NAV = [
+  { to: "/staff/pharmacy/dashboard",     label: "Pharmacy",        icon: LayoutDashboard },
+  { to: "/staff/pharmacy/prescriptions", label: "Prescriptions",   icon: Pill },
+  { to: "/staff/pharmacy/dispensed",     label: "Dispensed",       icon: CheckCircle2 },
+  { to: "/staff/pharmacy/inventory",     label: "Inventory",       icon: Package },
+];
+
 export function StaffLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useStaffAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
-  const isDoctor = user?.role === "doctor";
-  const isLab    = user?.role === "laboratory";
-  const NAV = isDoctor ? DOCTOR_NAV : isLab ? LABORATORY_NAV : RECEPTION_NAV;
-  const portalLabel = isDoctor ? "Doctor Portal" : isLab ? "Lab Portal" : "Staff Portal";
+  const isDoctor   = user?.role === "doctor";
+  const isLab      = user?.role === "laboratory";
+  const isPharmacy = user?.role === "pharmacy";
+  const NAV = isDoctor ? DOCTOR_NAV : isLab ? LABORATORY_NAV : isPharmacy ? PHARMACY_NAV : RECEPTION_NAV;
+  const portalLabel = isDoctor ? "Doctor Portal" : isLab ? "Lab Portal" : isPharmacy ? "Pharmacy Portal" : "Staff Portal";
 
   const handleLogout = () => {
     logout();

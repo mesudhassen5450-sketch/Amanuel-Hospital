@@ -28,6 +28,7 @@ function StaffLoginPage() {
       const role = storedRaw ? JSON.parse(storedRaw).role : null;
       if (role === "doctor")          window.location.href = "/staff/doctor/dashboard";
       else if (role === "laboratory") window.location.href = "/staff/laboratory/dashboard";
+      else if (role === "pharmacy")   window.location.href = "/staff/pharmacy/dashboard";
       else                            window.location.href = "/staff/dashboard";
     }
   }, [hydrated, isAuthenticated]);
@@ -55,6 +56,7 @@ function StaffLoginPage() {
       const role = storedRaw ? JSON.parse(storedRaw).role : null;
       if (role === "doctor")     { window.location.href = "/staff/doctor/dashboard"; }
       else if (role === "laboratory") { window.location.href = "/staff/laboratory/dashboard"; }
+      else if (role === "pharmacy")   { window.location.href = "/staff/pharmacy/dashboard"; }
       else                       { window.location.href = "/staff/dashboard"; }
     } else {
       setError("Invalid username or password. Please try again.");

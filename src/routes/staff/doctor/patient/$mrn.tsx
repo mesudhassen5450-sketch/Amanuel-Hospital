@@ -9,6 +9,9 @@ import {
   saveConsultation,
   createLabRequest,
   getPatientLabResults,
+  getMedicines,
+  savePrescription,
+  getPatientPrescriptions,
 } from "@/lib/staff-server";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +23,7 @@ import { toast } from "sonner";
 import {
   User, Phone, Calendar, MapPin, Heart, AlertTriangle, Activity,
   ChevronLeft, Loader2, ClipboardList, Stethoscope, CheckCircle2,
-  Clock, FlaskConical, TestTube,
+  Clock, FlaskConical, TestTube, Pill, Plus, Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +62,7 @@ const METHOD_LABEL: Record<string, string> = {
   telebirr: "Telebirr", cbe_birr: "CBE Birr", card: "Card", cash: "Cash",
 };
 
+
 function DoctorPatientPage() {
   const { mrn } = Route.useParams();
   const { appointmentId } = Route.useSearch();
@@ -72,7 +76,7 @@ function DoctorPatientPage() {
   const [loading, setLoading]         = useState(true);
   const [saving, setSaving]           = useState(false);
   const [saved, setSaved]             = useState(false);
-  const [activeTab, setActiveTab]     = useState<"profile" | "history" | "new" | "lab">("profile");
+  const [activeTab, setActiveTab]     = useState<"profile" | "history" | "new" | "lab" | "rx">("profile");
 
   // Lab request form state
   const LAB_TESTS = [
@@ -92,6 +96,22 @@ function DoctorPatientPage() {
   ];
   const [labForm, setLabForm]   = useState({ test_name: "", clinical_notes: "" });
   const [labSaving, setLabSaving] = useState(false);
+
+  // ── Prescription state ──────────────────────────────────────────────────────
+  const ROUTES_LIST = ["Oral", "IV", "IM", "SC", "Topical", "Inhaled", "Sublingual", "Rectal", "Eye drops", "Ear drops", "Nasal"];
+  const FREQ_LIST   = ["Once daily", "Twice daily", "3 times daily", "4 times daily", "Every 6 hours", "Every 8 hours", "Every 12 hours", "As needed (PRN)", "Once weekly", "Stat (single dose)"];
+  const DUR_LIST    = ["3 days", "5 days", "7 days", "10 days", "14 days", "1 month", "2 months", "3 months", "Ongoing", "As directed"];
+
+  type RxItem = { medicine_id: number | null; medicine_name_snapshot: string; dosage: string; frequency: string; duration: string; quantity: number; route: string; instructions: string; };
+  const emptyItem = (): RxItem => ({ medicine_id: null, medicine_name_snapshot: "", dosage: "", frequency: "", duration: "", quantity: 1, route: "Oral", instructions: "" });
+
+  const [medicines, setMedicines]           = useState<any[]>([]);
+  const [prescriptions, setPrescriptions]   = useState<any[]>([]);
+  const [rxItems, setRxItems]               = useState<RxItem[]>([emptyItem()]);
+  const [rxNotes, setRxNotes]               = useState("");
+  const [rxSaved, setRxSaved]               = useState(false);
+  const [rxSaving, setRxSaving]             = useState(false);
+  const [rxMedSearch, setRxMedSearch]       = useState<string[]>([""]);
 
   // Consultation form state
   const [form, setForm] = useState({
@@ -125,6 +145,13 @@ function DoctorPatientPage() {
           ]);
           setConsultations(c as any[]);
           setLabResults(lr as any[]);
+          // Load prescriptions + medicines list
+          const [rx, meds] = await Promise.all([
+            getPatientPrescriptions({ data: { patientId: p.patient.id } }),
+            getMedicines(),
+          ]);
+          setPrescriptions(rx as any[]);
+          setMedicines(meds as any[]);
         }
       } catch (e: any) {
         toast.error(e.message);
@@ -160,7 +187,67 @@ function DoctorPatientPage() {
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {    e.preventDefault();
+  // ── Prescription item helpers ──────────────────────────────────────────────
+  const updateRxItem = (idx: number, field: keyof RxItem, value: any) => {
+    setRxItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  };
+  const updateRxSearch = (idx: number, val: string) => {
+    setRxMedSearch(prev => prev.map((s, i) => i === idx ? val : s));
+    // If user types, clear the medicine_id so they must pick from filtered list
+    updateRxItem(idx, "medicine_name_snapshot", val);
+    updateRxItem(idx, "medicine_id", null);
+  };
+  const selectMedicine = (idx: number, med: any) => {
+    setRxMedSearch(prev => prev.map((s, i) => i === idx ? med.name : s));
+    updateRxItem(idx, "medicine_id", med.id);
+    updateRxItem(idx, "medicine_name_snapshot", med.name);
+  };
+  const addRxItem = () => {
+    setRxItems(prev => [...prev, emptyItem()]);
+    setRxMedSearch(prev => [...prev, ""]);
+  };
+  const removeRxItem = (idx: number) => {
+    if (rxItems.length === 1) return;
+    setRxItems(prev => prev.filter((_, i) => i !== idx));
+    setRxMedSearch(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleRxSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rxSaved) { toast.error("Prescription already saved for this session."); return; }
+    for (const item of rxItems) {
+      if (!item.medicine_name_snapshot.trim()) { toast.error("Select or type a medicine name for each row."); return; }
+      if (!item.dosage.trim())    { toast.error(`Enter dosage for ${item.medicine_name_snapshot}.`); return; }
+      if (!item.frequency.trim()) { toast.error(`Enter frequency for ${item.medicine_name_snapshot}.`); return; }
+      if (!item.duration.trim())  { toast.error(`Enter duration for ${item.medicine_name_snapshot}.`); return; }
+      if (item.quantity < 1)      { toast.error(`Quantity must be ≥ 1 for ${item.medicine_name_snapshot}.`); return; }
+    }
+    setRxSaving(true);
+    try {
+      const latestConsultation = consultations[0] ?? null;
+      await savePrescription({
+        data: {
+          patient_id:      patient.id,
+          appointment_id:  appointment?.id ?? null,
+          consultation_id: latestConsultation?.id ?? null,
+          doctor_username: user?.username ?? "doctor",
+          notes:           rxNotes || undefined,
+          items:           rxItems,
+        },
+      });
+      toast.success("Prescription saved successfully.");
+      setRxSaved(true);
+      const updated = await getPatientPrescriptions({ data: { patientId: patient.id } });
+      setPrescriptions(updated as any[]);
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save prescription.");
+    } finally {
+      setRxSaving(false);
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!form.chief_complaint.trim()) { toast.error("Chief complaint is required."); return; }
     if (!form.diagnosis.trim())       { toast.error("Diagnosis is required."); return; }
     if (saved) { toast.error("Consultation already saved for this session."); return; }
@@ -252,6 +339,7 @@ function DoctorPatientPage() {
             { key: "history", label: `History (${consultations.length})`,  icon: ClipboardList },
             { key: "new",     label: "New Consultation",                    icon: Stethoscope },
             { key: "lab",     label: `Laboratory (${labResults.length})`,   icon: FlaskConical },
+            { key: "rx",      label: `Prescriptions (${prescriptions.length})`, icon: Pill },
           ] as const).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -587,6 +675,251 @@ function DoctorPatientPage() {
                             </div>
                           )}
                         </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {/* ── RX TAB ───────────────────────────────────────────────────────── */}
+        {activeTab === "rx" && (
+          <div className="max-w-4xl space-y-6">
+
+            {/* ── New Prescription Form ─── */}
+            <Card className="border border-border/60 rounded-2xl shadow-sm">
+              <CardHeader className="pb-3 border-b border-border/40">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Pill className="h-4 w-4 text-primary" /> New Prescription
+                </CardTitle>
+              </CardHeader>
+              <form onSubmit={handleRxSave}>
+                <CardContent className="pt-5 space-y-5">
+                  {rxSaved && (
+                    <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 text-green-700 px-4 py-3 rounded-xl text-sm">
+                      <CheckCircle2 className="h-5 w-5 shrink-0" />
+                      Prescription saved successfully.
+                    </div>
+                  )}
+
+                  {/* Medicine rows */}
+                  {rxItems.map((item, idx) => {
+                    const filtered = rxMedSearch[idx]
+                      ? medicines.filter(m => m.name.toLowerCase().includes(rxMedSearch[idx].toLowerCase())).slice(0, 8)
+                      : [];
+                    const isSelected = item.medicine_id !== null;
+
+                    return (
+                      <div key={idx} className="border border-border/50 rounded-2xl p-4 space-y-4 bg-secondary/10 relative">
+                        {/* Row header */}
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Medicine {idx + 1}</p>
+                          {rxItems.length > 1 && !rxSaved && (
+                            <Button type="button" variant="ghost" size="icon"
+                              className="h-7 w-7 rounded-lg text-destructive hover:bg-destructive/10"
+                              onClick={() => removeRxItem(idx)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Medicine search/select */}
+                        <div className="space-y-1 relative">
+                          <Label className="font-semibold text-sm">
+                            Medicine <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            value={rxMedSearch[idx] ?? ""}
+                            onChange={e => updateRxSearch(idx, e.target.value)}
+                            placeholder="Type medicine name..."
+                            className="rounded-xl h-11"
+                            disabled={rxSaved}
+                            autoComplete="off"
+                          />
+                          {!isSelected && filtered.length > 0 && !rxSaved && (
+                            <div className="absolute z-10 w-full bg-card border border-border rounded-xl shadow-lg mt-1 max-h-48 overflow-y-auto">
+                              {filtered.map(med => (
+                                <button
+                                  key={med.id}
+                                  type="button"
+                                  onClick={() => selectMedicine(idx, med)}
+                                  className="w-full text-left px-4 py-2.5 hover:bg-secondary/60 transition-colors text-sm"
+                                >
+                                  <span className="font-medium">{med.name}</span>
+                                  <span className="text-xs text-muted-foreground ml-2">· {med.category} · {med.unit}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {isSelected && (
+                            <p className="text-xs text-primary font-medium">✓ {item.medicine_name_snapshot}</p>
+                          )}
+                        </div>
+
+                        {/* Dosage + Frequency + Duration + Quantity */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="space-y-1">
+                            <Label className="font-semibold text-xs">Dosage <span className="text-destructive">*</span></Label>
+                            <Input value={item.dosage}
+                              onChange={e => updateRxItem(idx, "dosage", e.target.value)}
+                              placeholder="e.g. 500 mg" className="rounded-xl h-10 text-sm" disabled={rxSaved} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-semibold text-xs">Frequency <span className="text-destructive">*</span></Label>
+                            <select value={item.frequency}
+                              onChange={e => updateRxItem(idx, "frequency", e.target.value)}
+                              className="w-full h-10 px-2 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                              disabled={rxSaved}>
+                              <option value="">Select...</option>
+                              {FREQ_LIST.map(f => <option key={f} value={f}>{f}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-semibold text-xs">Duration <span className="text-destructive">*</span></Label>
+                            <select value={item.duration}
+                              onChange={e => updateRxItem(idx, "duration", e.target.value)}
+                              className="w-full h-10 px-2 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                              disabled={rxSaved}>
+                              <option value="">Select...</option>
+                              {DUR_LIST.map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-semibold text-xs">Qty <span className="text-destructive">*</span></Label>
+                            <Input type="number" min={1} value={item.quantity}
+                              onChange={e => updateRxItem(idx, "quantity", parseInt(e.target.value) || 1)}
+                              className="rounded-xl h-10 text-sm" disabled={rxSaved} />
+                          </div>
+                        </div>
+
+                        {/* Route + Instructions */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="font-semibold text-xs">Route</Label>
+                            <select value={item.route}
+                              onChange={e => updateRxItem(idx, "route", e.target.value)}
+                              className="w-full h-10 px-2 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                              disabled={rxSaved}>
+                              {ROUTES_LIST.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="font-semibold text-xs">Instructions</Label>
+                            <Input value={item.instructions}
+                              onChange={e => updateRxItem(idx, "instructions", e.target.value)}
+                              placeholder="e.g. Take after meals" className="rounded-xl h-10 text-sm" disabled={rxSaved} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add medicine button */}
+                  {!rxSaved && (
+                    <Button type="button" variant="outline" className="gap-2 rounded-xl border-dashed" onClick={addRxItem}>
+                      <Plus className="h-4 w-4" /> Add Another Medicine
+                    </Button>
+                  )}
+
+                  {/* Notes */}
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-sm">Prescription Notes</Label>
+                    <Textarea value={rxNotes} onChange={e => setRxNotes(e.target.value)}
+                      placeholder="General instructions, allergy alerts, follow-up notes..."
+                      rows={2} className="rounded-xl resize-none" disabled={rxSaved} />
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Doctor: <strong>Dr. {user?.username}</strong> · Patient: <strong>{patient.full_name}</strong> · MRN: <strong>{patient.mrn}</strong>
+                  </p>
+                </CardContent>
+                <div className="flex gap-3 px-6 py-4 border-t border-border/40">
+                  <Button type="button" variant="outline" className="rounded-xl"
+                    onClick={() => { setRxItems([emptyItem()]); setRxMedSearch([""]); setRxNotes(""); setRxSaved(false); }}
+                    disabled={rxSaving}>
+                    Reset
+                  </Button>
+                  <Button type="submit" disabled={rxSaving || rxSaved} className="rounded-xl gap-2 shadow-sm">
+                    {rxSaving
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</>
+                      : rxSaved
+                        ? <><CheckCircle2 className="h-4 w-4" /> Saved</>
+                        : <><Pill className="h-4 w-4" /> Save Prescription</>
+                    }
+                  </Button>
+                </div>
+              </form>
+            </Card>
+
+            {/* ── Prescription History ─── */}
+            <div>
+              <h3 className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
+                <Pill className="h-4 w-4 text-primary" />
+                Prescription History
+              </h3>
+              {prescriptions.length === 0 ? (
+                <Card className="border border-dashed border-border/60 rounded-2xl">
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    <Pill className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm font-medium">No previous prescriptions.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {prescriptions.map((presc: any) => (
+                    <Card key={presc.id} className="border border-border/60 rounded-2xl shadow-sm">
+                      <CardHeader className="pb-3 border-b border-border/40">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                            <Pill className="h-4 w-4 text-primary" />
+                            {new Date(presc.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                          </CardTitle>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground capitalize">Dr. {presc.doctor_username}</span>
+                            <Badge className={cn("rounded-full border text-xs font-semibold px-2.5",
+                              presc.prescription_status === "Completed"
+                                ? "bg-green-500/10 text-green-700 border-green-500/20"
+                                : presc.prescription_status === "Cancelled"
+                                  ? "bg-destructive/10 text-destructive border-destructive/20"
+                                  : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                            )}>
+                              {presc.prescription_status}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        {/* Medicine items */}
+                        <div className="space-y-2">
+                          {(presc.prescription_items ?? []).map((item: any, i: number) => (
+                            <div key={item.id ?? i} className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs bg-secondary/20 rounded-xl px-4 py-3">
+                              <div>
+                                <p className="text-muted-foreground mb-0.5">Medicine</p>
+                                <p className="font-semibold text-foreground">{item.medicine_name_snapshot}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground mb-0.5">Dosage</p>
+                                <p className="font-medium">{item.dosage}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground mb-0.5">Frequency</p>
+                                <p className="font-medium">{item.frequency}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground mb-0.5">Duration / Qty</p>
+                                <p className="font-medium">{item.duration} · {item.quantity} {item.route}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground mb-0.5">Instructions</p>
+                                <p className="font-medium">{item.instructions || "—"}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {presc.notes && (
+                          <p className="text-xs text-muted-foreground mt-3 italic">{presc.notes}</p>
+                        )}
                       </CardContent>
                     </Card>
                   ))}

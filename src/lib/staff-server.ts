@@ -702,3 +702,248 @@ export const getAllLabResults = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+// ════════════════════════════════════════════════════════════
+// PHASE 7 — PRESCRIPTION SERVER FUNCTIONS
+// ════════════════════════════════════════════════════════════
+
+// ── Get active medicines list ─────────────────────────────────────────────────
+export const getMedicines = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from("medicines")
+      .select("id,name,generic_name,category,unit")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+// ── Save prescription + items atomically ─────────────────────────────────────
+export const savePrescription = createServerFn({ method: "POST" })
+  .validator((d: {
+    patient_id: number;
+    appointment_id?: number | null;
+    consultation_id?: number | null;
+    doctor_username: string;
+    notes?: string;
+    items: {
+      medicine_id?: number | null;
+      medicine_name_snapshot: string;
+      dosage: string;
+      frequency: string;
+      duration: string;
+      quantity: number;
+      route: string;
+      instructions?: string;
+    }[];
+  }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const now = new Date().toISOString();
+
+    // Validate patient exists
+    const { data: patient, error: pErr } = await sb
+      .from("patients")
+      .select("id,mrn")
+      .eq("id", data.patient_id)
+      .single();
+    if (pErr || !patient) throw new Error("Patient not found.");
+
+    // Validate items
+    if (!data.items || data.items.length === 0)
+      throw new Error("Prescription must have at least one medicine.");
+
+    for (const item of data.items) {
+      if (!item.medicine_name_snapshot.trim()) throw new Error("Medicine name is required.");
+      if (!item.dosage.trim())    throw new Error(`Dosage is required for ${item.medicine_name_snapshot}.`);
+      if (!item.frequency.trim()) throw new Error(`Frequency is required for ${item.medicine_name_snapshot}.`);
+      if (!item.duration.trim())  throw new Error(`Duration is required for ${item.medicine_name_snapshot}.`);
+      if (!item.quantity || item.quantity < 1)
+        throw new Error(`Quantity must be at least 1 for ${item.medicine_name_snapshot}.`);
+    }
+
+    // Insert prescription
+    const { data: presc, error: prescErr } = await sb
+      .from("prescriptions")
+      .insert({
+        patient_id:          data.patient_id,
+        appointment_id:      data.appointment_id ?? null,
+        consultation_id:     data.consultation_id ?? null,
+        doctor_username:     data.doctor_username,
+        prescription_status: "Pending",
+        notes:               data.notes ?? null,
+        created_at:          now,
+        updated_at:          now,
+      })
+      .select()
+      .single();
+    if (prescErr) throw new Error(prescErr.message);
+
+    // Insert items
+    const itemRows = data.items.map(item => ({
+      prescription_id:        presc.id,
+      medicine_id:            item.medicine_id ?? null,
+      medicine_name_snapshot: item.medicine_name_snapshot.trim(),
+      dosage:                 item.dosage.trim(),
+      frequency:              item.frequency.trim(),
+      duration:               item.duration.trim(),
+      quantity:               item.quantity,
+      route:                  item.route || "Oral",
+      instructions:           item.instructions ?? null,
+      dispensing_status:      "Pending",
+      dispensed_quantity:     0,
+      created_at:             now,
+      updated_at:             now,
+    }));
+
+    const { error: itemsErr } = await sb
+      .from("prescription_items")
+      .insert(itemRows);
+    if (itemsErr) throw new Error(itemsErr.message);
+
+    return presc;
+  });
+
+// ── Get prescriptions for a patient ──────────────────────────────────────────
+export const getPatientPrescriptions = createServerFn({ method: "POST" })
+  .validator((d: { patientId: number }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const { data: rows, error } = await sb
+      .from("prescriptions")
+      .select("*, prescription_items(*)")
+      .eq("patient_id", data.patientId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+// ════════════════════════════════════════════════════════════
+// PHASE 7.3 — PHARMACY SERVER FUNCTIONS
+// ════════════════════════════════════════════════════════════
+
+// ── Pharmacy: dashboard stats ─────────────────────────────────────────────────
+export const getPharmacyStats = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const sb = getSupabase();
+    const { data: prescriptions, error } = await sb
+      .from("prescriptions")
+      .select("id,prescription_status");
+    if (error) throw new Error(error.message);
+    const rows = prescriptions ?? [];
+    return {
+      pending:   rows.filter((r: any) => r.prescription_status === "Pending").length,
+      ready:     rows.filter((r: any) => r.prescription_status === "Ready").length,
+      completed: rows.filter((r: any) => r.prescription_status === "Completed").length,
+      cancelled: rows.filter((r: any) => r.prescription_status === "Cancelled").length,
+      total:     rows.length,
+    };
+  });
+
+// ── Pharmacy: get all prescriptions with patient + items ──────────────────────
+export const getPrescriptionsForPharmacy = createServerFn({ method: "POST" })
+  .validator((d: { status?: string }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    let q = sb
+      .from("prescriptions")
+      .select("*, patients(id,mrn,full_name,phone), prescription_items(*)")
+      .order("created_at", { ascending: false });
+    if (data.status) q = q.eq("prescription_status", data.status);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+// ── Pharmacy: get medicines with stock ───────────────────────────────────────
+export const getMedicinesWithStock = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from("medicines")
+      .select("id,name,generic_name,category,unit,stock_quantity,is_active")
+      .order("name", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+// ── Pharmacy: dispense a prescription ────────────────────────────────────────
+export const dispensePrescription = createServerFn({ method: "POST" })
+  .validator((d: { prescriptionId: number; pharmacistUsername: string }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+    const now = new Date().toISOString();
+
+    // Load prescription with items
+    const { data: presc, error: prescErr } = await sb
+      .from("prescriptions")
+      .select("*, prescription_items(*)")
+      .eq("id", data.prescriptionId)
+      .single();
+    if (prescErr || !presc) throw new Error("Prescription not found.");
+    if (presc.prescription_status === "Completed")
+      throw new Error("This prescription has already been dispensed.");
+    if (presc.prescription_status === "Cancelled")
+      throw new Error("Cannot dispense a cancelled prescription.");
+
+    const items = presc.prescription_items ?? [];
+    if (items.length === 0) throw new Error("Prescription has no items.");
+
+    // Stock check pass — collect medicine ids that have a medicine_id
+    for (const item of items) {
+      if (!item.medicine_id) continue; // medicine not linked to inventory
+      const { data: med } = await sb
+        .from("medicines")
+        .select("id,name,stock_quantity")
+        .eq("id", item.medicine_id)
+        .single();
+      if (med && med.stock_quantity < item.quantity) {
+        throw new Error(
+          `Insufficient stock for ${item.medicine_name_snapshot}. ` +
+          `Available: ${med.stock_quantity}, Required: ${item.quantity}.`
+        );
+      }
+    }
+
+    // Deduct stock + write dispense log
+    for (const item of items) {
+      if (item.medicine_id) {
+        const { data: med } = await sb
+          .from("medicines")
+          .select("stock_quantity")
+          .eq("id", item.medicine_id)
+          .single();
+        if (med) {
+          await sb
+            .from("medicines")
+            .update({ stock_quantity: Math.max(0, med.stock_quantity - item.quantity), updated_at: now })
+            .eq("id", item.medicine_id);
+        }
+      }
+      // Write dispense log
+      await sb.from("dispense_log").insert({
+        prescription_id:      data.prescriptionId,
+        prescription_item_id: item.id,
+        medicine_id:          item.medicine_id ?? null,
+        medicine_name:        item.medicine_name_snapshot,
+        quantity_dispensed:   item.quantity,
+        pharmacist_username:  data.pharmacistUsername,
+        dispensed_at:         now,
+      });
+      // Mark item as dispensed
+      await sb
+        .from("prescription_items")
+        .update({ dispensing_status: "Dispensed", dispensed_quantity: item.quantity, updated_at: now })
+        .eq("id", item.id);
+    }
+
+    // Mark prescription as Completed
+    await sb
+      .from("prescriptions")
+      .update({ prescription_status: "Completed", updated_at: now })
+      .eq("id", data.prescriptionId);
+
+    return true;
+  });

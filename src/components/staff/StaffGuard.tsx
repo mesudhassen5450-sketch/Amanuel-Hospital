@@ -22,6 +22,7 @@ export function StaffGuard({ children, allowedRoles }: StaffGuardProps) {
       // Redirect to their home dashboard
       if (user.role === "doctor")          window.location.href = "/staff/doctor/dashboard";
       else if (user.role === "laboratory") window.location.href = "/staff/laboratory/dashboard";
+      else if (user.role === "pharmacy")   window.location.href = "/staff/pharmacy/dashboard";
       else                                 window.location.href = "/staff/dashboard";
     }
   }, [hydrated, isAuthenticated, user, allowedRoles]);

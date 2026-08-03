@@ -2,8 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 
 function getSupabase() {
-  const url = process.env["VITE_SUPABASE_URL"] ?? import.meta.env?.["VITE_SUPABASE_URL"];
-  const key = process.env["VITE_SUPABASE_ANON_KEY"] ?? import.meta.env?.["VITE_SUPABASE_ANON_KEY"];
+  const url = process.env["VITE_SUPABASE_URL"]
+    ?? (typeof import.meta !== "undefined" ? (import.meta as any).env?.["VITE_SUPABASE_URL"] : undefined)
+    ?? process.env["SUPABASE_URL"];
+  const key = process.env["VITE_SUPABASE_ANON_KEY"]
+    ?? (typeof import.meta !== "undefined" ? (import.meta as any).env?.["VITE_SUPABASE_ANON_KEY"] : undefined)
+    ?? process.env["SUPABASE_ANON_KEY"];
   if (!url || !key) throw new Error("Supabase env vars not set on server.");
   return createClient(url, key);
 }

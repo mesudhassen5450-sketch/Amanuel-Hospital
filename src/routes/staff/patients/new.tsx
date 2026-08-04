@@ -71,7 +71,7 @@ function NewPatientPage() {
   };
 
   return (
-    <StaffGuard>
+    <StaffGuard allowedRoles={["reception", "staff"]}>
       <StaffLayout>
         {/* Page header */}
         <div className="mb-6 flex items-center gap-3">

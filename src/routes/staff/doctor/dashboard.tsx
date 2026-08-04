@@ -35,7 +35,7 @@ function DoctorDashboardPage() {
   ] : [];
 
   return (
-    <StaffGuard>
+    <StaffGuard allowedRoles={["doctor", "staff"]}>
       <StaffLayout>
         <div className="flex items-center justify-between mb-8">
           <div>

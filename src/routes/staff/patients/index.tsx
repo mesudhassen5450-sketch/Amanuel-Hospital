@@ -31,7 +31,7 @@ function PatientsPage() {
   );
 
   return (
-    <StaffGuard>
+    <StaffGuard allowedRoles={["reception", "staff"]}>
       <StaffLayout>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>

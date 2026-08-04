@@ -58,7 +58,7 @@ function PatientProfilePage() {
   }, [mrn]);
 
   if (loading) return (
-    <StaffGuard><StaffLayout>
+    <StaffGuard allowedRoles={["reception", "staff"]}><StaffLayout>
       <div className="flex items-center justify-center h-64 gap-2 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" /> Loading patient...
       </div>
@@ -66,7 +66,7 @@ function PatientProfilePage() {
   );
 
   if (error || !patient) return (
-    <StaffGuard><StaffLayout>
+    <StaffGuard allowedRoles={["reception", "staff"]}><StaffLayout>
       <div className="text-center py-20 text-muted-foreground">
         <p className="text-lg font-semibold">Patient not found</p>
         <Link to="/staff/patients"><Button variant="outline" className="mt-4 rounded-xl">Back to Patients</Button></Link>
@@ -75,7 +75,7 @@ function PatientProfilePage() {
   );
 
   return (
-    <StaffGuard>
+    <StaffGuard allowedRoles={["reception", "staff"]}>
       <StaffLayout>
         {/* Back + header */}
         <div className="flex items-start justify-between mb-6 flex-wrap gap-4">

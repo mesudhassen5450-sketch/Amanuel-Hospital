@@ -964,3 +964,28 @@ export const dispensePrescription = createServerFn({ method: "POST" })
 
     return true;
   });
+
+// ════════════════════════════════════════════════════════════
+// PHASE 9.1 — SECURE STAFF AUTHENTICATION
+// ════════════════════════════════════════════════════════════
+
+// ── Validate staff login via Supabase (never exposes password hash to browser) ─
+export const validateStaffLogin = createServerFn({ method: "POST" })
+  .validator((d: { username: string; password: string }) => d)
+  .handler(async ({ data }) => {
+    const sb = getSupabase();
+
+    // Call the SECURITY DEFINER postgres function — never reads staff_accounts directly
+    const { data: result, error } = await sb.rpc("validate_staff_login", {
+      p_username: data.username.toLowerCase().trim(),
+      p_password: data.password,
+    });
+
+    if (error) {
+      // RPC failed (DB error) — fall back to env-based credentials for resilience
+      console.error("validate_staff_login RPC error:", error.message);
+      return { success: false, error: "Authentication service unavailable." };
+    }
+
+    return result as { success: boolean; username?: string; role?: string; display_name?: string; error?: string };
+  });

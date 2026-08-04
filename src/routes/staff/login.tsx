@@ -43,23 +43,23 @@ function StaffLoginPage() {
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (!username || !password) { setError("Please enter both username and password."); return; }
     setLoading(true);
-    const ok = login(username.trim().toLowerCase(), password);
+    const result = await login(username.trim().toLowerCase(), password);
     setLoading(false);
-    if (ok) {
-      // Role-based redirect
+    if (result.success) {
+      // Role-based redirect — read from sessionStorage set by login()
       const storedRaw = sessionStorage.getItem("staff_session");
       const role = storedRaw ? JSON.parse(storedRaw).role : null;
-      if (role === "doctor")     { window.location.href = "/staff/doctor/dashboard"; }
+      if (role === "doctor")          { window.location.href = "/staff/doctor/dashboard"; }
       else if (role === "laboratory") { window.location.href = "/staff/laboratory/dashboard"; }
       else if (role === "pharmacy")   { window.location.href = "/staff/pharmacy/dashboard"; }
-      else                       { window.location.href = "/staff/dashboard"; }
+      else                            { window.location.href = "/staff/dashboard"; }
     } else {
-      setError("Invalid username or password. Please try again.");
+      setError(result.error ?? "Invalid username or password. Please try again.");
     }
   };
 

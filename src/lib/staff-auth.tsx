@@ -5,48 +5,58 @@ export type StaffRole = "staff" | "reception" | "doctor" | "laboratory" | "pharm
 interface StaffUser {
   username: string;
   role: StaffRole;
+  displayName?: string;
 }
 
 interface StaffAuthCtx {
   user: StaffUser | null;
-  login: (username: string, password: string) => boolean;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
-  hydrated: boolean; // true once sessionStorage has been read on the client
+  hydrated: boolean;
 }
-
-const STAFF_CREDENTIALS: Record<string, { password: string; role: StaffRole }> = {
-  staff:      { password: "4321", role: "staff" },
-  reception:  { password: "4321", role: "reception" },
-  doctor:     { password: "4321", role: "doctor" },
-  laboratory: { password: "4321", role: "laboratory" },
-  pharmacy:   { password: "4321", role: "pharmacy" },
-};
 
 const SESSION_KEY = "staff_session";
 
 const StaffAuthContext = createContext<StaffAuthCtx | null>(null);
 
 export function StaffAuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser]       = useState<StaffUser | null>(null);
+  const [user, setUser]         = useState<StaffUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
-  // Read session ONCE after client mount — never runs on server
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem(SESSION_KEY);
       if (stored) setUser(JSON.parse(stored));
     } catch {}
-    setHydrated(true); // mark as ready regardless of whether session existed
+    setHydrated(true);
   }, []);
 
-  const login = (username: string, password: string): boolean => {
-    const cred = STAFF_CREDENTIALS[username.toLowerCase()];
-    if (!cred || cred.password !== password) return false;
-    const u: StaffUser = { username: username.toLowerCase(), role: cred.role };
-    setUser(u);
-    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(u)); } catch {}
-    return true;
+  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // Server-side validation — password never checked in browser code
+      const { validateStaffLogin } = await import("./staff-server");
+      const result = await validateStaffLogin({ data: { username, password } });
+
+      if (result.success && result.username && result.role) {
+        const u: StaffUser = {
+          username:    result.username,
+          role:        result.role as StaffRole,
+          displayName: result.display_name ?? result.username,
+        };
+        setUser(u);
+        try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(u)); } catch {}
+        return { success: true };
+      }
+
+      return { success: false, error: result.error ?? "Invalid username or password." };
+    } catch (err: any) {
+      console.error("Authentication error:", err?.message);
+      return {
+        success: false,
+        error: "Authentication service is unavailable. Please try again.",
+      };
+    }
   };
 
   const logout = () => {

@@ -11,19 +11,37 @@ interface StaffGuardProps {
 export function StaffGuard({ children, allowedRoles }: StaffGuardProps) {
   const { isAuthenticated, hydrated, user } = useStaffAuth();
 
+  // Prevent browser from caching this page so back-button shows login instead
+  useEffect(() => {
+    // Instruct the browser not to cache this page
+    const meta = document.createElement("meta");
+    meta.setAttribute("http-equiv", "Cache-Control");
+    meta.setAttribute("content", "no-store, no-cache, must-revalidate");
+    document.head.appendChild(meta);
+
+    const pragma = document.createElement("meta");
+    pragma.setAttribute("http-equiv", "Pragma");
+    pragma.setAttribute("content", "no-cache");
+    document.head.appendChild(pragma);
+
+    return () => {
+      document.head.removeChild(meta);
+      document.head.removeChild(pragma);
+    };
+  }, []);
+
   useEffect(() => {
     if (!hydrated) return;
     if (!isAuthenticated) {
-      window.location.href = "/staff/login";
+      window.location.replace("/staff/login");
       return;
     }
-    // Role check
+    // Role check — redirect to their own dashboard
     if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
-      // Redirect to their home dashboard
-      if (user.role === "doctor")          window.location.href = "/staff/doctor/dashboard";
-      else if (user.role === "laboratory") window.location.href = "/staff/laboratory/dashboard";
-      else if (user.role === "pharmacy")   window.location.href = "/staff/pharmacy/dashboard";
-      else                                 window.location.href = "/staff/dashboard";
+      if (user.role === "doctor")          window.location.replace("/staff/doctor/dashboard");
+      else if (user.role === "laboratory") window.location.replace("/staff/laboratory/dashboard");
+      else if (user.role === "pharmacy")   window.location.replace("/staff/pharmacy/dashboard");
+      else                                 window.location.replace("/staff/dashboard");
     }
   }, [hydrated, isAuthenticated, user, allowedRoles]);
 

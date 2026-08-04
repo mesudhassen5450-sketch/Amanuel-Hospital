@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { StaffGuard } from "@/components/staff/StaffGuard";
 import { StaffLayout } from "@/components/staff/StaffLayout";
+import { useStaffAuth } from "@/lib/staff-auth";
 import { getReceptionAppointments, confirmCashPayment } from "@/lib/staff-server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ const METHOD_LABEL: Record<string, string> = {
 };
 
 function PaymentsPage() {
+  const { user } = useStaffAuth();
   const [appts, setAppts]       = useState<any[]>([]);
   const [loading, setLoading]   = useState(true);
   const [query, setQuery]       = useState("");
@@ -54,7 +56,7 @@ function PaymentsPage() {
     if (!confirmTarget) return;
     setConfirming(true);
     try {
-      await confirmCashPayment({ data: { id: confirmTarget.id } });
+      await confirmCashPayment({ data: { id: confirmTarget.id, callerRole: user?.role ?? undefined } });
       // Optimistic UI update — flip status immediately without re-fetch
       setAppts(prev =>
         prev.map(a => a.id === confirmTarget.id ? { ...a, paymentStatus: "paid" } : a)

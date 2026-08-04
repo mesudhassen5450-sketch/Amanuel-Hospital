@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { StaffGuard } from "@/components/staff/StaffGuard";
 import { StaffLayout } from "@/components/staff/StaffLayout";
+import { useStaffAuth } from "@/lib/staff-auth";
 import { registerPatient } from "@/lib/staff-server";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
 
 function NewPatientPage() {
   const navigate = useNavigate();
+  const { user } = useStaffAuth();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     full_name: "", phone: "", date_of_birth: "", gender: "",
@@ -59,6 +61,7 @@ function NewPatientPage() {
         allergies: form.allergies || undefined,
         chronic_conditions: form.chronic_conditions || undefined,
         notes: form.notes || undefined,
+        callerRole: user?.role ?? undefined,
       }});
       toast.success(`Patient registered! MRN: ${(patient as any).mrn}`);
       navigate({ to: "/staff/patients/$mrn", params: { mrn: (patient as any).mrn } });

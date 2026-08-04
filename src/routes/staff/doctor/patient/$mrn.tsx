@@ -173,6 +173,7 @@ function DoctorPatientPage() {
           doctor_username: user?.username ?? "doctor",
           test_name:       labForm.test_name,
           clinical_notes:  labForm.clinical_notes || undefined,
+          callerRole:      user?.role ?? undefined,
         },
       });
       toast.success(`Lab request for "${labForm.test_name}" submitted to laboratory.`);
@@ -234,6 +235,7 @@ function DoctorPatientPage() {
           doctor_username: user?.username ?? "doctor",
           notes:           rxNotes || undefined,
           items:           rxItems,
+          callerRole:      user?.role ?? undefined,
         },
       });
       toast.success("Prescription saved successfully.");
@@ -271,6 +273,7 @@ function DoctorPatientPage() {
           diagnosis:                 form.diagnosis.trim(),
           treatment_plan:            form.treatment_plan || undefined,
           additional_notes:          form.additional_notes || undefined,
+          callerRole:                user?.role ?? undefined,
         },
       });
       toast.success("Consultation saved. Appointment marked as Completed.");

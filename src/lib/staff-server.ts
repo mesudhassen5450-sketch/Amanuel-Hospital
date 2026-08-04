@@ -12,6 +12,36 @@ function getSupabase() {
   return createClient(url, key);
 }
 
+// ── Server-side role authorization ────────────────────────────────────────────
+// callerRole is sent from the client session — validated here server-side.
+// This prevents cross-role API abuse even if a user bypasses the frontend guard.
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  // reception/staff manage patients and appointments
+  registerPatient:       ["reception", "staff"],
+  updatePatient:         ["reception", "staff"],
+  confirmCashPayment:    ["reception", "staff"],
+  updateVisitStatus:     ["reception", "staff", "doctor"],
+  linkAppointmentToPatient: ["reception", "staff"],
+  // doctor manages clinical data
+  saveConsultation:      ["doctor", "staff"],
+  createLabRequest:      ["doctor", "staff"],
+  savePrescription:      ["doctor", "staff"],
+  // laboratory manages lab results
+  updateLabRequestStatus: ["laboratory", "staff"],
+  saveLabResult:          ["laboratory", "staff"],
+  // pharmacy manages dispensing
+  dispensePrescription:  ["pharmacy", "staff"],
+};
+
+function checkRole(fnName: string, callerRole?: string): void {
+  const allowed = ROLE_PERMISSIONS[fnName];
+  if (!allowed) return; // no restriction defined — open function
+  if (!callerRole) throw new Error(`Unauthorized: authentication required for ${fnName}.`);
+  if (!allowed.includes(callerRole)) {
+    throw new Error(`Unauthorized: role '${callerRole}' cannot perform '${fnName}'. Allowed: ${allowed.join(", ")}.`);
+  }
+}
+
 // ── MRN generation ────────────────────────────────────────────────────────────
 export const generateMRN = createServerFn({ method: "POST" })
   .handler(async () => {
@@ -27,8 +57,10 @@ export const registerPatient = createServerFn({ method: "POST" })
     full_name: string; phone: string; date_of_birth?: string; gender?: string;
     address?: string; emergency_contact_name?: string; emergency_contact_phone?: string;
     blood_group?: string; allergies?: string; chronic_conditions?: string; notes?: string;
+    callerRole?: string;
   }) => d)
   .handler(async ({ data }) => {
+    checkRole("registerPatient", data.callerRole);
     const sb = getSupabase();
     // Generate MRN first
     const { data: mrn, error: mrnErr } = await sb.rpc("generate_mrn");
@@ -46,10 +78,11 @@ export const registerPatient = createServerFn({ method: "POST" })
 
 // ── Update patient ────────────────────────────────────────────────────────────
 export const updatePatient = createServerFn({ method: "POST" })
-  .validator((d: { id: number; [key: string]: any }) => d)
+  .validator((d: { id: number; callerRole?: string; [key: string]: any }) => d)
   .handler(async ({ data }) => {
+    checkRole("updatePatient", data.callerRole);
     const sb = getSupabase();
-    const { id, ...rest } = data;
+    const { id, callerRole: _cr, ...rest } = data;
     const { error } = await sb
       .from("patients")
       .update({ ...rest, updated_at: new Date().toISOString() })
@@ -119,8 +152,9 @@ export const getReceptionAppointments = createServerFn({ method: "POST" })
 
 // ── Update visit status ───────────────────────────────────────────────────────
 export const updateVisitStatus = createServerFn({ method: "POST" })
-  .validator((d: { id: string; visitStatus: string }) => d)
+  .validator((d: { id: string; visitStatus: string; callerRole?: string }) => d)
   .handler(async ({ data }) => {
+    checkRole("updateVisitStatus", data.callerRole);
     const sb = getSupabase();
     const now = new Date().toISOString();
     const updatePayload: any = { visit_status: data.visitStatus, updated_at: now };
@@ -138,8 +172,9 @@ export const updateVisitStatus = createServerFn({ method: "POST" })
 
 // ── Link appointment to patient ───────────────────────────────────────────────
 export const linkAppointmentToPatient = createServerFn({ method: "POST" })
-  .validator((d: { appointmentId: string; patientId: number }) => d)
+  .validator((d: { appointmentId: string; patientId: number; callerRole?: string }) => d)
   .handler(async ({ data }) => {
+    checkRole("linkAppointmentToPatient", data.callerRole);
     const sb = getSupabase();
     const { error } = await sb
       .from("appointments")
@@ -314,8 +349,10 @@ export const saveConsultation = createServerFn({ method: "POST" })
     diagnosis: string;
     treatment_plan?: string;
     additional_notes?: string;
+    callerRole?: string;
   }) => d)
   .handler(async ({ data }) => {
+    checkRole("saveConsultation", data.callerRole);
     const sb = getSupabase();
     const now = new Date().toISOString();
 
@@ -340,8 +377,9 @@ export const saveConsultation = createServerFn({ method: "POST" })
 
 // ── Confirm cash payment ──────────────────────────────────────────────────────
 export const confirmCashPayment = createServerFn({ method: "POST" })
-  .validator((d: { id: string }) => d)
+  .validator((d: { id: string; callerRole?: string }) => d)
   .handler(async ({ data }) => {
+    checkRole("confirmCashPayment", data.callerRole);
     const sb = getSupabase();
     // Only confirm if payment_method is cash AND payment_status is pending
     const { data: appt, error: fetchErr } = await sb
@@ -621,8 +659,9 @@ export const getLabRequests = createServerFn({ method: "POST" })
 
 // ── Lab: update request status ────────────────────────────────────────────────
 export const updateLabRequestStatus = createServerFn({ method: "POST" })
-  .validator((d: { id: number; status: string }) => d)
+  .validator((d: { id: number; status: string; callerRole?: string }) => d)
   .handler(async ({ data }) => {
+    checkRole("updateLabRequestStatus", data.callerRole);
     const sb = getSupabase();
     const { error } = await sb
       .from("lab_requests")
@@ -642,8 +681,10 @@ export const saveLabResult = createServerFn({ method: "POST" })
     reference_range: string;
     unit: string;
     notes?: string;
+    callerRole?: string;
   }) => d)
   .handler(async ({ data }) => {
+    checkRole("saveLabResult", data.callerRole);
     const sb = getSupabase();
     const now = new Date().toISOString();
     const { data: result, error: rErr } = await sb
@@ -682,8 +723,10 @@ export const createLabRequest = createServerFn({ method: "POST" })
     doctor_username: string;
     test_name: string;
     clinical_notes?: string;
+    callerRole?: string;
   }) => d)
   .handler(async ({ data }) => {
+    checkRole("createLabRequest", data.callerRole);
     const sb = getSupabase();
     const now = new Date().toISOString();
     const { data: req, error } = await sb
@@ -732,6 +775,7 @@ export const savePrescription = createServerFn({ method: "POST" })
     consultation_id?: number | null;
     doctor_username: string;
     notes?: string;
+    callerRole?: string;
     items: {
       medicine_id?: number | null;
       medicine_name_snapshot: string;
@@ -744,6 +788,7 @@ export const savePrescription = createServerFn({ method: "POST" })
     }[];
   }) => d)
   .handler(async ({ data }) => {
+    checkRole("savePrescription", data.callerRole);
     const sb = getSupabase();
     const now = new Date().toISOString();
 
@@ -888,8 +933,9 @@ export const getMedicinesWithStock = createServerFn({ method: "POST" })
 
 // ── Pharmacy: dispense a prescription ────────────────────────────────────────
 export const dispensePrescription = createServerFn({ method: "POST" })
-  .validator((d: { prescriptionId: number; pharmacistUsername: string }) => d)
+  .validator((d: { prescriptionId: number; pharmacistUsername: string; callerRole?: string }) => d)
   .handler(async ({ data }) => {
+    checkRole("dispensePrescription", data.callerRole);
     const sb = getSupabase();
     const now = new Date().toISOString();
 

@@ -101,7 +101,7 @@ function LabPatientProfilePage() {
 
   const handleStatusChange = async (id: number, status: string) => {
     try {
-      await updateLabRequestStatus({ data: { id, status } });
+      await updateLabRequestStatus({ data: { id, status, callerRole: user?.role ?? undefined } });
       toast.success(`Status updated to: ${status}`);
       setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
     } catch (e: any) { toast.error(e.message); }
@@ -124,6 +124,7 @@ function LabPatientProfilePage() {
           reference_range: resultForm.reference_range.trim(),
           unit:           resultForm.unit.trim(),
           notes:          resultForm.notes || undefined,
+          callerRole:     user?.role ?? undefined,
         },
       });
       toast.success("Lab result saved. Request marked as Completed.");

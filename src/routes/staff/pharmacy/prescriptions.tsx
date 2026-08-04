@@ -61,7 +61,7 @@ function PharmacyPrescriptionsPage() {
     setDispensing(id);
     setConfirmId(null);
     try {
-      await dispensePrescription({ data: { prescriptionId: id, pharmacistUsername: user?.username ?? "pharmacy" } });
+      await dispensePrescription({ data: { prescriptionId: id, pharmacistUsername: user?.username ?? "pharmacy", callerRole: user?.role ?? undefined } });
       toast.success("Prescription dispensed successfully.");
       setRefreshKey(k => k + 1);
     } catch (e: any) {

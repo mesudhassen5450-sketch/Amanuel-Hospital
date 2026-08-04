@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { StaffGuard } from "@/components/staff/StaffGuard";
 import { StaffLayout } from "@/components/staff/StaffLayout";
+import { useStaffAuth } from "@/lib/staff-auth";
 import { getReceptionAppointments, updateVisitStatus, linkAppointmentToPatient, getPatients, sendSmsReminder } from "@/lib/staff-server";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ const SMS_STATUS_LABEL: Record<string, string> = {
 };
 
 function AppointmentsPage() {
+  const { user } = useStaffAuth();
   const [appts, setAppts]         = useState<any[]>([]);
   const [patients, setPatients]   = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -72,7 +74,7 @@ function AppointmentsPage() {
 
   const handleStatus = async (id: string, visitStatus: string) => {
     try {
-      await updateVisitStatus({ data: { id, visitStatus } });
+      await updateVisitStatus({ data: { id, visitStatus, callerRole: user?.role ?? undefined } });
       toast.success(`Status updated to: ${STATUS_LABEL[visitStatus]}`);
       setAppts(prev => prev.map(a => a.id === id ? { ...a, visitStatus } : a));
     } catch (e: any) { toast.error(e.message); }
@@ -98,7 +100,7 @@ function AppointmentsPage() {
 
   const handleLink = async (apptId: string, patientId: number) => {
     try {
-      await linkAppointmentToPatient({ data: { appointmentId: apptId, patientId } });
+      await linkAppointmentToPatient({ data: { appointmentId: apptId, patientId, callerRole: user?.role ?? undefined } });
       toast.success("Appointment linked to patient record.");
       setLinkModal(null);
       load(dateFilter);

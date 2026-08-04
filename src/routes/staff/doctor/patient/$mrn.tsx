@@ -216,7 +216,8 @@ function DoctorPatientPage() {
     e.preventDefault();
     if (rxSaved) { toast.error("Prescription already saved for this session."); return; }
     for (const item of rxItems) {
-      if (!item.medicine_name_snapshot.trim()) { toast.error("Select or type a medicine name for each row."); return; }
+      if (!item.medicine_name_snapshot.trim()) { toast.error("Select a medicine from the list for each row."); return; }
+      if (!item.medicine_id) { toast.error(`Please select "${item.medicine_name_snapshot}" from the dropdown list — do not just type the name.`); return; }
       if (!item.dosage.trim())    { toast.error(`Enter dosage for ${item.medicine_name_snapshot}.`); return; }
       if (!item.frequency.trim()) { toast.error(`Enter frequency for ${item.medicine_name_snapshot}.`); return; }
       if (!item.duration.trim())  { toast.error(`Enter duration for ${item.medicine_name_snapshot}.`); return; }
@@ -732,8 +733,11 @@ function DoctorPatientPage() {
                           <Input
                             value={rxMedSearch[idx] ?? ""}
                             onChange={e => updateRxSearch(idx, e.target.value)}
-                            placeholder="Type medicine name..."
-                            className="rounded-xl h-11"
+                            placeholder="Type to search medicine..."
+                            className={cn(
+                              "rounded-xl h-11",
+                              item.medicine_id ? "border-green-500/50 focus-visible:ring-green-500/30" : ""
+                            )}
                             disabled={rxSaved}
                             autoComplete="off"
                           />

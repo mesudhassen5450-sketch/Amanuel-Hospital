@@ -755,17 +755,30 @@ export const savePrescription = createServerFn({ method: "POST" })
       .single();
     if (pErr || !patient) throw new Error("Patient not found.");
 
-    // Validate items
+    // Validate items — require medicine_id from medicines table
     if (!data.items || data.items.length === 0)
       throw new Error("Prescription must have at least one medicine.");
 
     for (const item of data.items) {
-      if (!item.medicine_name_snapshot.trim()) throw new Error("Medicine name is required.");
-      if (!item.dosage.trim())    throw new Error(`Dosage is required for ${item.medicine_name_snapshot}.`);
-      if (!item.frequency.trim()) throw new Error(`Frequency is required for ${item.medicine_name_snapshot}.`);
-      if (!item.duration.trim())  throw new Error(`Duration is required for ${item.medicine_name_snapshot}.`);
+      if (!item.medicine_name_snapshot.trim())
+        throw new Error("Medicine name is required.");
+      if (!item.medicine_id)
+        throw new Error(`"${item.medicine_name_snapshot}" was typed manually. Please select it from the medicine list.`);
+      // Verify medicine_id exists and is active in the medicines table
+      const { data: med, error: medErr } = await sb
+        .from("medicines")
+        .select("id,name,is_active")
+        .eq("id", item.medicine_id)
+        .single();
+      if (medErr || !med)
+        throw new Error(`Medicine ID ${item.medicine_id} not found in the medicines database.`);
+      if (!med.is_active)
+        throw new Error(`"${med.name}" is inactive and cannot be prescribed.`);
+      if (!item.dosage.trim())    throw new Error(`Dosage is required for ${med.name}.`);
+      if (!item.frequency.trim()) throw new Error(`Frequency is required for ${med.name}.`);
+      if (!item.duration.trim())  throw new Error(`Duration is required for ${med.name}.`);
       if (!item.quantity || item.quantity < 1)
-        throw new Error(`Quantity must be at least 1 for ${item.medicine_name_snapshot}.`);
+        throw new Error(`Quantity must be at least 1 for ${med.name}.`);
     }
 
     // Insert prescription

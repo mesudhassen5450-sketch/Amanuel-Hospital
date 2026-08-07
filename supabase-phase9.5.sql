@@ -261,7 +261,25 @@ BEGIN
 END;
 $$;
 
--- 10. Grant execute permissions to anon for staff management functions
+-- 10. Add RLS policies to allow anon to read/write staff_accounts
+-- Note: Access is protected by server-side role checks in the application
+DROP POLICY IF EXISTS anon_select_staff_accounts ON public.staff_accounts;
+CREATE POLICY anon_select_staff_accounts ON public.staff_accounts
+  FOR SELECT TO anon
+  USING (true);
+
+DROP POLICY IF EXISTS anon_insert_staff_accounts ON public.staff_accounts;
+CREATE POLICY anon_insert_staff_accounts ON public.staff_accounts
+  FOR INSERT TO anon
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS anon_update_staff_accounts ON public.staff_accounts;
+CREATE POLICY anon_update_staff_accounts ON public.staff_accounts
+  FOR UPDATE TO anon
+  USING (true)
+  WITH CHECK (true);
+
+-- 11. Grant execute permissions to anon for staff management functions
 -- Note: These should be protected by server-side role checks, not RLS
 GRANT EXECUTE ON FUNCTION public.get_all_staff_accounts() TO anon;
 GRANT EXECUTE ON FUNCTION public.get_staff_account_by_id(bigint) TO anon;

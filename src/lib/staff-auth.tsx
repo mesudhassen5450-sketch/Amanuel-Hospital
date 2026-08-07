@@ -115,18 +115,10 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
       if (!s) expireSession();
     }, 60_000);
 
-    // Prevent browser caching of authenticated pages
-    window.history.pushState(null, "", window.location.href);
-    const handlePopState = () => {
-      window.history.pushState(null, "", window.location.href);
-    };
-    window.addEventListener("popstate", handlePopState);
-
     return () => {
       clearTimeout(idleTimer);
       clearInterval(hardCheck);
       EVENTS.forEach(e => window.removeEventListener(e, resetTimer));
-      window.removeEventListener("popstate", handlePopState);
     };
   }, [user, expireSession]);
 

@@ -2,7 +2,7 @@ import { type ReactNode, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, CalendarDays, CreditCard, LogOut,
-  Stethoscope, Menu, X, Clock, ClipboardList, FlaskConical, TestTube, Pill, CheckCircle2, Package,
+  Stethoscope, Menu, X, Clock, ClipboardList, FlaskConical, TestTube, Pill, CheckCircle2, Package, Shield,
 } from "lucide-react";
 import { useStaffAuth } from "@/lib/staff-auth";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,14 @@ const RECEPTION_NAV = [
   { to: "/staff/patients",     label: "Patients",      icon: Users },
   { to: "/staff/appointments", label: "Appointments",  icon: CalendarDays },
   { to: "/staff/payments",     label: "Payments",      icon: CreditCard },
+];
+
+const ADMIN_NAV = [
+  { to: "/staff/dashboard",       label: "Dashboard",       icon: LayoutDashboard },
+  { to: "/staff/patients",        label: "Patients",        icon: Users },
+  { to: "/staff/appointments",    label: "Appointments",    icon: CalendarDays },
+  { to: "/staff/payments",        label: "Payments",        icon: CreditCard },
+  { to: "/staff/staff-accounts",  label: "Staff Accounts",  icon: Shield },
 ];
 
 const DOCTOR_NAV = [
@@ -44,8 +52,9 @@ export function StaffLayout({ children }: { children: ReactNode }) {
   const isDoctor   = user?.role === "doctor";
   const isLab      = user?.role === "laboratory";
   const isPharmacy = user?.role === "pharmacy";
-  const NAV = isDoctor ? DOCTOR_NAV : isLab ? LABORATORY_NAV : isPharmacy ? PHARMACY_NAV : RECEPTION_NAV;
-  const portalLabel = isDoctor ? "Doctor Portal" : isLab ? "Lab Portal" : isPharmacy ? "Pharmacy Portal" : "Staff Portal";
+  const isAdmin    = user?.role === "admin";
+  const NAV = isAdmin ? ADMIN_NAV : isDoctor ? DOCTOR_NAV : isLab ? LABORATORY_NAV : isPharmacy ? PHARMACY_NAV : RECEPTION_NAV;
+  const portalLabel = isAdmin ? "Admin Portal" : isDoctor ? "Doctor Portal" : isLab ? "Lab Portal" : isPharmacy ? "Pharmacy Portal" : "Staff Portal";
 
   const handleLogout = () => {
     logout();

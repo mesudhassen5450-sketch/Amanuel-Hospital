@@ -17,20 +17,27 @@ function getSupabase() {
 // This prevents cross-role API abuse even if a user bypasses the frontend guard.
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   // reception/staff manage patients and appointments
-  registerPatient:       ["reception", "staff"],
-  updatePatient:         ["reception", "staff"],
-  confirmCashPayment:    ["reception", "staff"],
-  updateVisitStatus:     ["reception", "staff", "doctor"],
-  linkAppointmentToPatient: ["reception", "staff"],
+  registerPatient:       ["reception", "staff", "admin"],
+  updatePatient:         ["reception", "staff", "admin"],
+  confirmCashPayment:    ["reception", "staff", "admin"],
+  updateVisitStatus:     ["reception", "staff", "doctor", "admin"],
+  linkAppointmentToPatient: ["reception", "staff", "admin"],
   // doctor manages clinical data
-  saveConsultation:      ["doctor", "staff"],
-  createLabRequest:      ["doctor", "staff"],
-  savePrescription:      ["doctor", "staff"],
+  saveConsultation:      ["doctor", "staff", "admin"],
+  createLabRequest:      ["doctor", "staff", "admin"],
+  savePrescription:      ["doctor", "staff", "admin"],
   // laboratory manages lab results
-  updateLabRequestStatus: ["laboratory", "staff"],
-  saveLabResult:          ["laboratory", "staff"],
+  updateLabRequestStatus: ["laboratory", "staff", "admin"],
+  saveLabResult:          ["laboratory", "staff", "admin"],
   // pharmacy manages dispensing
-  dispensePrescription:  ["pharmacy", "staff"],
+  dispensePrescription:  ["pharmacy", "staff", "admin"],
+  // admin manages staff accounts
+  getAllStaffAccounts:   ["admin"],
+  getStaffAccountById:   ["admin"],
+  createStaffAccount:    ["admin"],
+  updateStaffAccount:    ["admin"],
+  resetStaffPassword:    ["admin"],
+  toggleStaffStatus:     ["admin"],
 };
 
 function checkRole(fnName: string, callerRole?: string): void {
@@ -1034,4 +1041,153 @@ export const validateStaffLogin = createServerFn({ method: "POST" })
     }
 
     return result as { success: boolean; username?: string; role?: string; display_name?: string; error?: string };
+  });
+
+// ════════════════════════════════════════════════════════════
+// PHASE 9.5 — STAFF ACCOUNT MANAGEMENT
+// ════════════════════════════════════════════════════════════
+
+// ── Get all staff accounts (admin only) ───────────────────────────────────────
+export const getAllStaffAccounts = createServerFn({ method: "POST" })
+  .validator((d: { callerRole?: string }) => d)
+  .handler(async ({ data }) => {
+    checkRole("getAllStaffAccounts", data.callerRole);
+    const sb = getSupabase();
+
+    const { data: result, error } = await sb.rpc("get_all_staff_accounts");
+    if (error) throw new Error(error.message);
+
+    const parsed = result as { success: boolean; data?: any[]; error?: string };
+    if (!parsed.success) throw new Error(parsed.error ?? "Failed to fetch staff accounts");
+
+    return parsed.data ?? [];
+  });
+
+// ── Get single staff account by ID (admin only) ───────────────────────────────
+export const getStaffAccountById = createServerFn({ method: "POST" })
+  .validator((d: { id: number; callerRole?: string }) => d)
+  .handler(async ({ data }) => {
+    checkRole("getStaffAccountById", data.callerRole);
+    const sb = getSupabase();
+
+    const { data: result, error } = await sb.rpc("get_staff_account_by_id", { p_id: data.id });
+    if (error) throw new Error(error.message);
+
+    const parsed = result as { success: boolean; data?: any; error?: string };
+    if (!parsed.success) throw new Error(parsed.error ?? "Failed to fetch staff account");
+
+    return parsed.data;
+  });
+
+// ── Create new staff account (admin only) ───────────────────────────────────────
+export const createStaffAccount = createServerFn({ method: "POST" })
+  .validator((d: {
+    username: string;
+    password: string;
+    role: string;
+    displayName: string;
+    isActive: boolean;
+    callerRole?: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    checkRole("createStaffAccount", data.callerRole);
+    const sb = getSupabase();
+
+    // Validate password strength
+    if (data.password.length < 6) {
+      throw new Error("Password must be at least 6 characters long");
+    }
+
+    const { data: result, error } = await sb.rpc("create_staff_account", {
+      p_username: data.username.toLowerCase().trim(),
+      p_password: data.password,
+      p_role: data.role,
+      p_display_name: data.displayName,
+      p_is_active: data.isActive,
+    });
+
+    if (error) throw new Error(error.message);
+
+    const parsed = result as { success: boolean; data?: any; error?: string };
+    if (!parsed.success) throw new Error(parsed.error ?? "Failed to create staff account");
+
+    return parsed.data;
+  });
+
+// ── Update staff account (admin only) ───────────────────────────────────────────
+export const updateStaffAccount = createServerFn({ method: "POST" })
+  .validator((d: {
+    id: number;
+    username: string;
+    role: string;
+    displayName: string;
+    isActive: boolean;
+    callerRole?: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    checkRole("updateStaffAccount", data.callerRole);
+    const sb = getSupabase();
+
+    const { data: result, error } = await sb.rpc("update_staff_account", {
+      p_id: data.id,
+      p_username: data.username.toLowerCase().trim(),
+      p_role: data.role,
+      p_display_name: data.displayName,
+      p_is_active: data.isActive,
+    });
+
+    if (error) throw new Error(error.message);
+
+    const parsed = result as { success: boolean; data?: any; error?: string };
+    if (!parsed.success) throw new Error(parsed.error ?? "Failed to update staff account");
+
+    return parsed.data;
+  });
+
+// ── Reset staff password (admin only) ─────────────────────────────────────────
+export const resetStaffPassword = createServerFn({ method: "POST" })
+  .validator((d: {
+    id: number;
+    newPassword: string;
+    callerRole?: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    checkRole("resetStaffPassword", data.callerRole);
+    const sb = getSupabase();
+
+    // Validate password strength
+    if (data.newPassword.length < 6) {
+      throw new Error("Password must be at least 6 characters long");
+    }
+
+    const { data: result, error } = await sb.rpc("reset_staff_password", {
+      p_id: data.id,
+      p_new_password: data.newPassword,
+    });
+
+    if (error) throw new Error(error.message);
+
+    const parsed = result as { success: boolean; message?: string; error?: string };
+    if (!parsed.success) throw new Error(parsed.error ?? "Failed to reset password");
+
+    return { success: true, message: parsed.message };
+  });
+
+// ── Toggle staff account active status (admin only) ────────────────────────────
+export const toggleStaffStatus = createServerFn({ method: "POST" })
+  .validator((d: {
+    id: number;
+    callerRole?: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    checkRole("toggleStaffStatus", data.callerRole);
+    const sb = getSupabase();
+
+    const { data: result, error } = await sb.rpc("toggle_staff_account_status", { p_id: data.id });
+    if (error) throw new Error(error.message);
+
+    const parsed = result as { success: boolean; data?: any; error?: string };
+    if (!parsed.success) throw new Error(parsed.error ?? "Failed to toggle staff status");
+
+    return parsed.data;
   });

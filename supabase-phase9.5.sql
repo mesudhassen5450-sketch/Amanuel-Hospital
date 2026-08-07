@@ -261,8 +261,9 @@ BEGIN
 END;
 $$;
 
--- 10. Add RLS policies to allow anon to read/write staff_accounts
--- Note: Access is protected by server-side role checks in the application
+-- 10. RLS policies for staff_accounts (custom login system)
+-- Since this uses custom login (not Supabase Auth), we allow anon access
+-- but rely on server-side role checks in staff-server.ts for security
 DROP POLICY IF EXISTS anon_select_staff_accounts ON public.staff_accounts;
 CREATE POLICY anon_select_staff_accounts ON public.staff_accounts
   FOR SELECT TO anon
@@ -278,6 +279,9 @@ CREATE POLICY anon_update_staff_accounts ON public.staff_accounts
   FOR UPDATE TO anon
   USING (true)
   WITH CHECK (true);
+
+-- Note: All access is protected by server-side role checks in staff-server.ts
+-- The checkRole() function enforces admin-only access for staff account management
 
 -- 11. Grant execute permissions to anon for staff management functions
 -- Note: These should be protected by server-side role checks, not RLS

@@ -95,7 +95,16 @@ function StaffAccountsPage() {
       const data = await getAllStaffAccounts({ data: { callerRole: user?.role as string | undefined } });
       setStaffAccounts(data);
     } catch (error: any) {
-      toast.error(error.message || "Failed to fetch staff accounts");
+      // Handle permission errors gracefully - treat as not admin rather than crash
+      const errorMessage = error?.message || "Failed to fetch staff accounts";
+      if (errorMessage.includes("permission") || errorMessage.includes("403") || errorMessage.includes("401")) {
+        console.warn("Permission denied accessing staff accounts:", errorMessage);
+        toast.error("You don't have permission to access staff accounts");
+      } else {
+        toast.error(errorMessage);
+      }
+      // Set empty array to prevent UI crashes
+      setStaffAccounts([]);
     } finally {
       setLoading(false);
     }
@@ -134,7 +143,7 @@ function StaffAccountsPage() {
   // Save edit
   const handleSaveEdit = async () => {
     if (!selectedStaff) return;
-    
+
     try {
       setFormLoading(true);
       const { updateStaffAccount } = await import("@/lib/staff-server");
@@ -152,7 +161,13 @@ function StaffAccountsPage() {
       setEditDialogOpen(false);
       fetchStaffAccounts();
     } catch (error: any) {
-      toast.error(error.message || "Failed to update staff account");
+      const errorMessage = error?.message || "Failed to update staff account";
+      if (errorMessage.includes("permission") || errorMessage.includes("403") || errorMessage.includes("401")) {
+        console.warn("Permission denied updating staff account:", errorMessage);
+        toast.error("You don't have permission to update staff accounts");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setFormLoading(false);
     }
@@ -168,17 +183,17 @@ function StaffAccountsPage() {
   // Save password reset
   const handleSavePasswordReset = async () => {
     if (!selectedStaff) return;
-    
+
     if (resetPasswordForm.newPassword.length < 6) {
       toast.error("Password must be at least 6 characters long");
       return;
     }
-    
+
     if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
-    
+
     try {
       setFormLoading(true);
       const { resetStaffPassword } = await import("@/lib/staff-server");
@@ -192,7 +207,13 @@ function StaffAccountsPage() {
       toast.success("Password reset successfully");
       setResetPasswordDialogOpen(false);
     } catch (error: any) {
-      toast.error(error.message || "Failed to reset password");
+      const errorMessage = error?.message || "Failed to reset password";
+      if (errorMessage.includes("permission") || errorMessage.includes("403") || errorMessage.includes("401")) {
+        console.warn("Permission denied resetting password:", errorMessage);
+        toast.error("You don't have permission to reset passwords");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setFormLoading(false);
     }
@@ -207,7 +228,7 @@ function StaffAccountsPage() {
   // Confirm toggle status
   const handleConfirmToggleStatus = async () => {
     if (!selectedStaff) return;
-    
+
     try {
       setFormLoading(true);
       await toggleStaffStatus({
@@ -219,7 +240,13 @@ function StaffAccountsPage() {
       setToggleStatusDialogOpen(false);
       fetchStaffAccounts();
     } catch (error: any) {
-      toast.error(error.message || "Failed to toggle status");
+      const errorMessage = error?.message || "Failed to toggle status";
+      if (errorMessage.includes("permission") || errorMessage.includes("403") || errorMessage.includes("401")) {
+        console.warn("Permission denied toggling status:", errorMessage);
+        toast.error("You don't have permission to toggle staff account status");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setFormLoading(false);
     }

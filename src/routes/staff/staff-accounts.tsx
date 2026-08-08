@@ -98,11 +98,8 @@ function StaffAccountsPage() {
       if (Array.isArray(res)) {
         list = res;
       } else if (res && typeof res === "object") {
-        if (Array.isArray((res as any).data)) {
-          list = (res as any).data;
-        } else if (Array.isArray((res as any).result)) {
-          list = (res as any).result;
-        }
+        if (Array.isArray((res as any).result)) list = (res as any).result;
+        else if (Array.isArray((res as any).data)) list = (res as any).data;
       }
       setStaffAccounts(list);
     } catch (error: any) {

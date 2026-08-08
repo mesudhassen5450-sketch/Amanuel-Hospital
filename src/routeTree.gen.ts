@@ -26,6 +26,7 @@ import { Route as StaffPaymentsRouteImport } from './routes/staff/payments'
 import { Route as StaffLoginRouteImport } from './routes/staff/login'
 import { Route as StaffDashboardRouteImport } from './routes/staff/dashboard'
 import { Route as StaffAppointmentsRouteImport } from './routes/staff/appointments'
+import { Route as StaffAdminRouteImport } from './routes/staff/admin'
 import { Route as StaffPatientsIndexRouteImport } from './routes/staff/patients/index'
 import { Route as StaffStaffAccountsCreateRouteImport } from './routes/staff/staff-accounts/create'
 import { Route as StaffPharmacyPrescriptionsRouteImport } from './routes/staff/pharmacy/prescriptions'
@@ -128,6 +129,11 @@ const StaffAppointmentsRoute = StaffAppointmentsRouteImport.update({
   path: '/staff/appointments',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StaffAdminRoute = StaffAdminRouteImport.update({
+  id: '/staff/admin',
+  path: '/staff/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaffPatientsIndexRoute = StaffPatientsIndexRouteImport.update({
   id: '/staff/patients/',
   path: '/staff/patients/',
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/staff/admin': typeof StaffAdminRoute
   '/staff/appointments': typeof StaffAppointmentsRoute
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/staff/admin': typeof StaffAdminRoute
   '/staff/appointments': typeof StaffAppointmentsRoute
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
@@ -297,6 +305,7 @@ export interface FileRoutesById {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/staff/admin': typeof StaffAdminRoute
   '/staff/appointments': typeof StaffAppointmentsRoute
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
@@ -334,6 +343,7 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/staff/admin'
     | '/staff/appointments'
     | '/staff/dashboard'
     | '/staff/login'
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/staff/admin'
     | '/staff/appointments'
     | '/staff/dashboard'
     | '/staff/login'
@@ -404,6 +415,7 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/staff/admin'
     | '/staff/appointments'
     | '/staff/dashboard'
     | '/staff/login'
@@ -440,6 +452,7 @@ export interface RootRouteChildren {
   PaymentSummaryRoute: typeof PaymentSummaryRoute
   ServicesRoute: typeof ServicesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StaffAdminRoute: typeof StaffAdminRoute
   StaffAppointmentsRoute: typeof StaffAppointmentsRoute
   StaffDashboardRoute: typeof StaffDashboardRoute
   StaffLoginRoute: typeof StaffLoginRoute
@@ -583,6 +596,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffAppointmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/staff/admin': {
+      id: '/staff/admin'
+      path: '/staff/admin'
+      fullPath: '/staff/admin'
+      preLoaderRoute: typeof StaffAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff/patients/': {
       id: '/staff/patients/'
       path: '/staff/patients'
@@ -722,6 +742,7 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentSummaryRoute: PaymentSummaryRoute,
   ServicesRoute: ServicesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StaffAdminRoute: StaffAdminRoute,
   StaffAppointmentsRoute: StaffAppointmentsRoute,
   StaffDashboardRoute: StaffDashboardRoute,
   StaffLoginRoute: StaffLoginRoute,

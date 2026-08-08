@@ -3,27 +3,24 @@ import { createClient } from "@supabase/supabase-js";
 
 // Server-side Supabase client (uses env vars available at build/runtime)
 function getSupabase() {
-  const url = process.env["VITE_SUPABASE_URL"] ?? import.meta.env?.["VITE_SUPABASE_URL"];
-  const key = process.env["VITE_SUPABASE_ANON_KEY"] ?? import.meta.env?.["VITE_SUPABASE_ANON_KEY"];
+  const url = process.env["VITE_SUPABASE_URL"] ?? (typeof import.meta !== "undefined" ? (import.meta as any).env?.["VITE_SUPABASE_URL"] : undefined);
+  const key = process.env["VITE_SUPABASE_ANON_KEY"] ?? (typeof import.meta !== "undefined" ? (import.meta as any).env?.["VITE_SUPABASE_ANON_KEY"] : undefined);
   if (!url || !key) throw new Error("Supabase env vars not set on server.");
   return createClient(url, key);
 }
 
-// ── Auth check ────────────────────────────────────────────────────────────────
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "4321";
-
-function checkAuth(username: string, password: string) {
-  if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
-    throw new Error("Unauthorized access: Invalid username or password.");
+// ── Role Authorization Check ──────────────────────────────────────────────────
+function checkRoleAuth(callerRole?: string) {
+  if (!callerRole || !["admin", "reception", "cashier", "staff"].includes(callerRole)) {
+    throw new Error("Unauthorized access: Administrative or Cashier privileges required.");
   }
 }
 
 // ── Get all appointments ──────────────────────────────────────────────────────
 export const getAdminBookings = createServerFn({ method: "POST" })
-  .validator((data: { username: string; password: string }) => data)
+  .validator((data: { callerRole?: string }) => data)
   .handler(async ({ data }) => {
-    checkAuth(data.username, data.password);
+    checkRoleAuth(data?.callerRole);
     const supabase = getSupabase();
     const { data: rows, error } = await supabase
       .from("appointments")
@@ -48,8 +45,9 @@ export const getAdminBookings = createServerFn({ method: "POST" })
 
 // ── Update booking status ─────────────────────────────────────────────────────
 export const updateBookingStatusServer = createServerFn({ method: "POST" })
-  .validator((data: { id: string; status: string }) => data)
+  .validator((data: { id: string; status: string; callerRole?: string }) => data)
   .handler(async ({ data }) => {
+    checkRoleAuth(data?.callerRole);
     const supabase = getSupabase();
     const bookingStatus = data.status === "Paid & Confirmed" ? "confirmed" :
                           data.status === "Cancelled"        ? "cancelled"  : "pending";
@@ -65,8 +63,9 @@ export const updateBookingStatusServer = createServerFn({ method: "POST" })
 
 // ── Delete booking ────────────────────────────────────────────────────────────
 export const deleteBookingServer = createServerFn({ method: "POST" })
-  .validator((data: { id: string }) => data)
+  .validator((data: { id: string; callerRole?: string }) => data)
   .handler(async ({ data }) => {
+    checkRoleAuth(data?.callerRole);
     const supabase = getSupabase();
     const { error } = await supabase
       .from("appointments")
@@ -76,7 +75,7 @@ export const deleteBookingServer = createServerFn({ method: "POST" })
     return true;
   });
 
-// ── addBookingServer kept for backwards compat (no-op now, booking.tsx uses supabase directly) ──
+// ── addBookingServer kept for backwards compat ────────────────────────────────
 export const addBookingServer = createServerFn({ method: "POST" })
   .validator((data: any) => data)
   .handler(async () => true);
@@ -92,6 +91,5 @@ function normaliseMethod(m: string): string {
 function normaliseStatus(bookingStatus: string, paymentStatus: string): string {
   if (bookingStatus === "confirmed" || paymentStatus === "paid") return "Paid & Confirmed";
   if (bookingStatus === "cancelled" || paymentStatus === "failed") return "Cancelled";
-  // pending booking — differentiate cash vs online
   return "Waiting for Payment";
 }

@@ -1,0 +1,848 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { useStaffAuth } from "@/lib/staff-auth";
+import { StaffLayout } from "@/components/staff/StaffLayout";
+import { StaffGuard } from "@/components/staff/StaffGuard";
+import {
+  getAllStaffAccounts,
+  toggleStaffStatus,
+} from "@/lib/staff-server";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Users,
+  UserCheck,
+  UserX,
+  Plus,
+  Search,
+  Eye,
+  Edit,
+  Key,
+  Power,
+  Loader2,
+  Shield,
+  User,
+  Calendar,
+  RefreshCw,
+  Stethoscope,
+  FlaskConical,
+  Pill,
+  CreditCard,
+  Building2,
+  AlertTriangle,
+} from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/staff/admin")({
+  head: () => ({
+    meta: [
+      { title: "Admin Dashboard & Staff Management — Dr. Amanuel Hospital" },
+      { name: "description", content: "Executive administrative dashboard and staff user account control." },
+    ],
+  }),
+  component: AdminDashboardPage,
+});
+
+type StaffAccount = {
+  id: number;
+  username: string;
+  role: string;
+  display_name: string | null;
+  is_active: boolean;
+  last_login: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function AdminDashboardPage() {
+  const { user } = useStaffAuth();
+  const [staffAccounts, setStaffAccounts] = useState<StaffAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorState, setErrorState] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+
+  // Dialog states
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [toggleStatusDialogOpen, setToggleStatusDialogOpen] = useState(false);
+
+  // Selected staff account
+  const [selectedStaff, setSelectedStaff] = useState<StaffAccount | null>(null);
+
+  // Form states
+  const [editForm, setEditForm] = useState({
+    username: "",
+    displayName: "",
+    role: "",
+    isActive: true,
+  });
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [formLoading, setFormLoading] = useState(false);
+
+  // Fetch staff accounts
+  const fetchStaffAccounts = async () => {
+    try {
+      setLoading(true);
+      setErrorState(null);
+      const data = await getAllStaffAccounts({ data: { callerRole: user?.role as string | undefined } });
+      setStaffAccounts(data || []);
+    } catch (error: any) {
+      const msg = error?.message || "Failed to load staff accounts.";
+      console.error("Fetch staff accounts error:", msg);
+      setErrorState(msg);
+      toast.error(msg);
+      setStaffAccounts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStaffAccounts();
+  }, []);
+
+  // Stats calculations
+  const totalStaff = staffAccounts.length;
+  const activeStaff = staffAccounts.filter((s) => s.is_active).length;
+  const inactiveStaff = staffAccounts.filter((s) => !s.is_active).length;
+  const receptionCount = staffAccounts.filter((s) => s.role === "reception").length;
+  const cashierCount = staffAccounts.filter((s) => s.role === "cashier").length;
+  const doctorCount = staffAccounts.filter((s) => s.role === "doctor").length;
+  const labCount = staffAccounts.filter((s) => s.role === "laboratory").length;
+  const pharmacyCount = staffAccounts.filter((s) => s.role === "pharmacy").length;
+
+  // Filter staff accounts
+  const filteredStaff = staffAccounts.filter((staff) => {
+    const matchesSearch =
+      staff.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      staff.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      staff.role?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === "all" || staff.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  // Action Handlers
+  const handleView = (staff: StaffAccount) => {
+    setSelectedStaff(staff);
+    setViewDialogOpen(true);
+  };
+
+  const handleEdit = (staff: StaffAccount) => {
+    setSelectedStaff(staff);
+    setEditForm({
+      username: staff.username,
+      displayName: staff.display_name || "",
+      role: staff.role,
+      isActive: staff.is_active,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedStaff) return;
+    try {
+      setFormLoading(true);
+      const { updateStaffAccount } = await import("@/lib/staff-server");
+      await updateStaffAccount({
+        data: {
+          id: selectedStaff.id,
+          username: editForm.username,
+          role: editForm.role,
+          displayName: editForm.displayName,
+          isActive: editForm.isActive,
+          callerRole: user?.role as string | undefined,
+        },
+      });
+      toast.success("Staff account updated successfully");
+      setEditDialogOpen(false);
+      fetchStaffAccounts();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update staff account");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleResetPassword = (staff: StaffAccount) => {
+    setSelectedStaff(staff);
+    setResetPasswordForm({ newPassword: "", confirmPassword: "" });
+    setResetPasswordDialogOpen(true);
+  };
+
+  const handleSavePasswordReset = async () => {
+    if (!selectedStaff) return;
+
+    if (resetPasswordForm.newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+
+    if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    try {
+      setFormLoading(true);
+      const { resetStaffPassword } = await import("@/lib/staff-server");
+      await resetStaffPassword({
+        data: {
+          id: selectedStaff.id,
+          newPassword: resetPasswordForm.newPassword,
+          callerRole: user?.role as string | undefined,
+        },
+      });
+      toast.success("Password reset successfully");
+      setResetPasswordDialogOpen(false);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to reset password");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleToggleStatus = (staff: StaffAccount) => {
+    setSelectedStaff(staff);
+    setToggleStatusDialogOpen(true);
+  };
+
+  const handleConfirmToggleStatus = async () => {
+    if (!selectedStaff) return;
+
+    try {
+      setFormLoading(true);
+      await toggleStaffStatus({
+        data: { id: selectedStaff.id, callerRole: user?.role as string | undefined },
+      });
+      toast.success(
+        `Staff account ${selectedStaff.is_active ? "deactivated" : "activated"} successfully`
+      );
+      setToggleStatusDialogOpen(false);
+      fetchStaffAccounts();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update staff status");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Never";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "bg-purple-500/10 text-purple-600 border-purple-500/20";
+      case "doctor":
+        return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+      case "reception":
+        return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+      case "pharmacy":
+        return "bg-amber-500/10 text-amber-600 border-amber-500/20";
+      case "laboratory":
+        return "bg-cyan-500/10 text-cyan-600 border-cyan-500/20";
+      case "cashier":
+        return "bg-indigo-500/10 text-indigo-600 border-indigo-500/20";
+      default:
+        return "bg-slate-500/10 text-slate-600 border-slate-500/20";
+    }
+  };
+
+  return (
+    <StaffGuard allowedRoles={["admin"]}>
+      <StaffLayout>
+        <div className="space-y-8 animate-fade-in">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-border/60">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground font-display flex items-center gap-3">
+                <Shield className="h-8 w-8 text-primary" />
+                Admin Dashboard
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Hospital staff oversight, account creation, and role management
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={fetchStaffAccounts}
+                disabled={loading}
+                className="gap-2 rounded-xl"
+              >
+                <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+                Refresh
+              </Button>
+              <Link to="/staff/staff-accounts/create">
+                <Button className="gap-2 rounded-xl shadow-md">
+                  <Plus className="h-4 w-4" />
+                  Add Staff Account
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Stats Overview Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border border-border/60 bg-card shadow-sm rounded-2xl">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Staff</p>
+                  <p className="text-3xl font-extrabold font-display text-foreground mt-1">{totalStaff}</p>
+                </div>
+                <div className="bg-primary/10 p-3 rounded-xl text-primary">
+                  <Users className="h-6 w-6" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/60 bg-card shadow-sm rounded-2xl">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Accounts</p>
+                  <p className="text-3xl font-extrabold font-display text-emerald-600 mt-1">{activeStaff}</p>
+                </div>
+                <div className="bg-emerald-500/10 p-3 rounded-xl text-emerald-600">
+                  <UserCheck className="h-6 w-6" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/60 bg-card shadow-sm rounded-2xl">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Inactive Staff</p>
+                  <p className="text-3xl font-extrabold font-display text-destructive mt-1">{inactiveStaff}</p>
+                </div>
+                <div className="bg-destructive/10 p-3 rounded-xl text-destructive">
+                  <UserX className="h-6 w-6" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/60 bg-card shadow-sm rounded-2xl">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Doctors</p>
+                  <p className="text-3xl font-extrabold font-display text-blue-600 mt-1">{doctorCount}</p>
+                </div>
+                <div className="bg-blue-500/10 p-3 rounded-xl text-blue-600">
+                  <Stethoscope className="h-6 w-6" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Secondary Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-card border border-border/60 rounded-2xl p-4 flex items-center gap-3">
+              <div className="bg-emerald-500/10 p-2.5 rounded-xl text-emerald-600">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Reception</p>
+                <p className="text-xl font-bold font-display">{receptionCount}</p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border/60 rounded-2xl p-4 flex items-center gap-3">
+              <div className="bg-indigo-500/10 p-2.5 rounded-xl text-indigo-600">
+                <CreditCard className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Cashiers</p>
+                <p className="text-xl font-bold font-display">{cashierCount}</p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border/60 rounded-2xl p-4 flex items-center gap-3">
+              <div className="bg-cyan-500/10 p-2.5 rounded-xl text-cyan-600">
+                <FlaskConical className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Laboratory</p>
+                <p className="text-xl font-bold font-display">{labCount}</p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border/60 rounded-2xl p-4 flex items-center gap-3">
+              <div className="bg-amber-500/10 p-2.5 rounded-xl text-amber-600">
+                <Pill className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Pharmacy</p>
+                <p className="text-xl font-bold font-display">{pharmacyCount}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Error Notice */}
+          {errorState && (
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-2xl p-4 flex items-center gap-3 text-sm">
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold">Database Error</p>
+                <p className="text-xs text-destructive/80 mt-0.5">{errorState}</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={fetchStaffAccounts} className="rounded-xl text-xs">
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {/* Search & Filter Bar */}
+          <Card className="border border-border/60 bg-card shadow-sm rounded-2xl p-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by username, full name, or role..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 rounded-xl border-input/60"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label htmlFor="role-filter" className="text-xs text-muted-foreground whitespace-nowrap">Filter Role:</Label>
+                <select
+                  id="role-filter"
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="h-10 px-3 rounded-xl border border-input/60 bg-background text-xs font-semibold outline-none cursor-pointer"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="admin">Admin</option>
+                  <option value="reception">Reception</option>
+                  <option value="cashier">Cashier</option>
+                  <option value="doctor">Doctor</option>
+                  <option value="laboratory">Laboratory</option>
+                  <option value="pharmacy">Pharmacy</option>
+                  <option value="staff">Staff</option>
+                </select>
+              </div>
+            </div>
+          </Card>
+
+          {/* Staff Accounts Table */}
+          <Card className="border border-border/60 bg-card shadow-md rounded-2xl overflow-hidden">
+            <CardHeader className="border-b border-border/60 bg-muted/20 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg font-bold font-display">Hospital Staff Accounts</CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground">
+                    Manage credentials, roles, and status for all hospital staff
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="rounded-full px-3 py-1 font-mono text-xs">
+                  {filteredStaff.length} Accounts
+                </Badge>
+              </div>
+            </CardHeader>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="font-semibold">Full Name</TableHead>
+                    <TableHead className="font-semibold">Username</TableHead>
+                    <TableHead className="font-semibold">Role</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">Created Date</TableHead>
+                    <TableHead className="font-semibold">Last Login</TableHead>
+                    <TableHead className="font-semibold text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                          <span className="text-sm">Loading staff account data...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredStaff.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                        {searchQuery || roleFilter !== "all"
+                          ? "No staff accounts matched your filters."
+                          : "No staff accounts found in the database."}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredStaff.map((staff) => (
+                      <TableRow key={staff.id} className="hover:bg-muted/20 transition-colors">
+                        <TableCell className="font-semibold text-foreground">
+                          {staff.display_name || "—"}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {staff.username}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={cn("border font-semibold text-xs capitalize", getRoleBadgeColor(staff.role))}>
+                            {staff.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={cn(
+                              "border text-xs font-semibold rounded-full px-2.5 py-0.5",
+                              staff.is_active
+                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                : "bg-destructive/10 text-destructive border-destructive/20"
+                            )}
+                          >
+                            {staff.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          {formatDate(staff.created_at)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          {formatDate(staff.last_login)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleView(staff)}
+                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(staff)}
+                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary"
+                              title="Edit Staff Account"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleResetPassword(staff)}
+                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-amber-600"
+                              title="Reset Password"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleStatus(staff)}
+                              className={cn(
+                                "h-8 w-8 rounded-lg",
+                                staff.is_active
+                                  ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  : "text-emerald-600 hover:bg-emerald-500/10"
+                              )}
+                              title={staff.is_active ? "Deactivate Account" : "Activate Account"}
+                            >
+                              <Power className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </div>
+
+        {/* View Modal */}
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="sm:max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 font-display">
+                <User className="h-5 w-5 text-primary" />
+                Staff Account Details
+              </DialogTitle>
+            </DialogHeader>
+            {selectedStaff && (
+              <div className="space-y-4 py-3">
+                <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-xl">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Full Name</Label>
+                    <p className="font-semibold text-sm mt-0.5">{selectedStaff.display_name || "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Username</Label>
+                    <p className="font-mono text-sm mt-0.5">{selectedStaff.username}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Role</Label>
+                    <div className="mt-1">
+                      <Badge className={cn("border font-semibold text-xs capitalize", getRoleBadgeColor(selectedStaff.role))}>
+                        {selectedStaff.role}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Account Status</Label>
+                    <div className="mt-1">
+                      <Badge
+                        className={cn(
+                          "border text-xs font-semibold rounded-full px-2.5 py-0.5",
+                          selectedStaff.is_active
+                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                            : "bg-destructive/10 text-destructive border-destructive/20"
+                        )}
+                      >
+                        {selectedStaff.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 border-t border-border/60 pt-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Calendar className="h-3 w-3" /> Created
+                    </Label>
+                    <p className="text-xs font-medium mt-1">{formatDate(selectedStaff.created_at)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Calendar className="h-3 w-3" /> Last Login
+                    </Label>
+                    <p className="text-xs font-medium mt-1">{formatDate(selectedStaff.last_login)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Modal */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 font-display">
+                <Edit className="h-5 w-5 text-primary" />
+                Edit Staff Account
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Update account parameters for {selectedStaff?.display_name || selectedStaff?.username}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-username" className="text-xs font-semibold">Username (Immutable)</Label>
+                <Input
+                  id="edit-username"
+                  value={editForm.username}
+                  disabled
+                  className="rounded-xl bg-muted/40 font-mono text-xs cursor-not-allowed"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-displayName" className="text-xs font-semibold">Full Name</Label>
+                <Input
+                  id="edit-displayName"
+                  value={editForm.displayName}
+                  onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })}
+                  placeholder="Enter staff full name"
+                  className="rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-role" className="text-xs font-semibold">System Role</Label>
+                <select
+                  id="edit-role"
+                  value={editForm.role}
+                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                  className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold outline-none"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="reception">Reception</option>
+                  <option value="cashier">Cashier</option>
+                  <option value="doctor">Doctor</option>
+                  <option value="laboratory">Laboratory</option>
+                  <option value="pharmacy">Pharmacy</option>
+                  <option value="staff">Staff</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="edit-isActive"
+                  checked={editForm.isActive}
+                  onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                />
+                <Label htmlFor="edit-isActive" className="text-xs cursor-pointer font-medium">
+                  Active Account (Allowed to sign in)
+                </Label>
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-xl text-xs">
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit} disabled={formLoading} className="rounded-xl text-xs font-semibold">
+                {formLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reset Password Modal */}
+        <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
+          <DialogContent className="sm:max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 font-display">
+                <Key className="h-5 w-5 text-primary" />
+                Reset Password
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Enter a new password for {selectedStaff?.display_name || selectedStaff?.username}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="new-password" className="text-xs font-semibold">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={resetPasswordForm.newPassword}
+                  onChange={(e) =>
+                    setResetPasswordForm({ ...resetPasswordForm, newPassword: e.target.value })
+                  }
+                  placeholder="At least 6 characters"
+                  className="rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="confirm-password" className="text-xs font-semibold">Confirm Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={resetPasswordForm.confirmPassword}
+                  onChange={(e) =>
+                    setResetPasswordForm({ ...resetPasswordForm, confirmPassword: e.target.value })
+                  }
+                  placeholder="Re-enter new password"
+                  className="rounded-xl"
+                />
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button variant="outline" onClick={() => setResetPasswordDialogOpen(false)} className="rounded-xl text-xs">
+                Cancel
+              </Button>
+              <Button onClick={handleSavePasswordReset} disabled={formLoading} className="rounded-xl text-xs font-semibold">
+                {formLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Resetting...
+                  </>
+                ) : (
+                  "Reset Password"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Toggle Status Modal */}
+        <AlertDialog open={toggleStatusDialogOpen} onOpenChange={setToggleStatusDialogOpen}>
+          <AlertDialogContent className="rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 font-display">
+                <Power className="h-5 w-5 text-primary" />
+                {selectedStaff?.is_active ? "Deactivate" : "Activate"} Staff Account
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-xs text-muted-foreground mt-2">
+                Are you sure you want to {selectedStaff?.is_active ? "deactivate" : "activate"} the account for{" "}
+                <span className="font-semibold text-foreground">{selectedStaff?.display_name || selectedStaff?.username}</span>?
+                {selectedStaff?.is_active &&
+                  " Inactive users are immediately blocked from logging into the portal."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="pt-3">
+              <AlertDialogCancel className="rounded-xl text-xs">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmToggleStatus}
+                disabled={formLoading}
+                className={cn(
+                  "rounded-xl text-xs font-semibold",
+                  selectedStaff?.is_active ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "bg-emerald-600 text-white hover:bg-emerald-700"
+                )}
+              >
+                {formLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...
+                  </>
+                ) : selectedStaff?.is_active ? (
+                  "Deactivate Account"
+                ) : (
+                  "Activate Account"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </StaffLayout>
+    </StaffGuard>
+  );
+}

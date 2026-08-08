@@ -26,7 +26,9 @@ function StaffLoginPage() {
     if (hydrated && isAuthenticated) {
       const storedRaw = sessionStorage.getItem("staff_session");
       const role = storedRaw ? JSON.parse(storedRaw).role : null;
-      if (role === "doctor")          window.location.href = "/staff/doctor/dashboard";
+      if (role === "admin")           window.location.href = "/staff/admin";
+      else if (role === "cashier")    window.location.href = "/staff/payments";
+      else if (role === "doctor")     window.location.href = "/staff/doctor/dashboard";
       else if (role === "laboratory") window.location.href = "/staff/laboratory/dashboard";
       else if (role === "pharmacy")   window.location.href = "/staff/pharmacy/dashboard";
       else                            window.location.href = "/staff/dashboard";
@@ -54,7 +56,9 @@ function StaffLoginPage() {
       // Role-based redirect — read from sessionStorage set by login()
       const storedRaw = sessionStorage.getItem("staff_session");
       const role = storedRaw ? JSON.parse(storedRaw).role : null;
-      if (role === "doctor")          { window.location.href = "/staff/doctor/dashboard"; }
+      if (role === "admin")           { window.location.href = "/staff/admin"; }
+      else if (role === "cashier")    { window.location.href = "/staff/payments"; }
+      else if (role === "doctor")     { window.location.href = "/staff/doctor/dashboard"; }
       else if (role === "laboratory") { window.location.href = "/staff/laboratory/dashboard"; }
       else if (role === "pharmacy")   { window.location.href = "/staff/pharmacy/dashboard"; }
       else                            { window.location.href = "/staff/dashboard"; }

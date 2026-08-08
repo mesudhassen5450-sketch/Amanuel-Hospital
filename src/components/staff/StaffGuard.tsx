@@ -36,9 +36,11 @@ export function StaffGuard({ children, allowedRoles }: StaffGuardProps) {
       window.location.replace("/staff/login");
       return;
     }
-    // Role check — redirect to their own dashboard
+    // Role check — redirect to their own portal/dashboard
     if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
-      if (user.role === "doctor")          window.location.replace("/staff/doctor/dashboard");
+      if (user.role === "admin")           window.location.replace("/staff/admin");
+      else if (user.role === "cashier")    window.location.replace("/staff/payments");
+      else if (user.role === "doctor")     window.location.replace("/staff/doctor/dashboard");
       else if (user.role === "laboratory") window.location.replace("/staff/laboratory/dashboard");
       else if (user.role === "pharmacy")   window.location.replace("/staff/pharmacy/dashboard");
       else                                 window.location.replace("/staff/dashboard");

@@ -17,35 +17,50 @@ function getSupabase() {
 // This prevents cross-role API abuse even if a user bypasses the frontend guard.
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   // reception/staff manage patients and appointments
-  registerPatient:       ["reception", "staff", "admin"],
-  updatePatient:         ["reception", "staff", "admin"],
-  confirmCashPayment:    ["reception", "staff", "admin"],
-  updateVisitStatus:     ["reception", "staff", "doctor", "admin"],
+  registerPatient:          ["reception", "staff", "admin"],
+  updatePatient:            ["reception", "staff", "admin"],
+  confirmCashPayment:       ["reception", "cashier", "staff", "admin"],
+  updateVisitStatus:        ["reception", "staff", "doctor", "admin"],
   linkAppointmentToPatient: ["reception", "staff", "admin"],
+  getDashboardStats:        ["reception", "staff", "admin"],
+  sendSmsReminder:          ["reception", "staff", "admin"],
+  sendAutomatedReminders:   ["reception", "staff", "admin"],
   // doctor manages clinical data
-  saveConsultation:      ["doctor", "staff", "admin"],
-  createLabRequest:      ["doctor", "staff", "admin"],
-  savePrescription:      ["doctor", "staff", "admin"],
+  getDoctorQueue:           ["doctor", "staff", "admin"],
+  getDoctorStats:           ["doctor", "staff", "admin"],
+  getPatientConsultations:  ["doctor", "staff", "admin"],
+  saveConsultation:         ["doctor", "staff", "admin"],
+  createLabRequest:         ["doctor", "staff", "admin"],
+  savePrescription:         ["doctor", "staff", "admin"],
+  getPatientPrescriptions:  ["doctor", "pharmacy", "staff", "admin"],
   // laboratory manages lab results
-  updateLabRequestStatus: ["laboratory", "staff", "admin"],
-  saveLabResult:          ["laboratory", "staff", "admin"],
+  getLabDashboardStats:     ["laboratory", "staff", "admin"],
+  getLabRequests:           ["laboratory", "staff", "admin"],
+  updateLabRequestStatus:   ["laboratory", "staff", "admin"],
+  saveLabResult:            ["laboratory", "staff", "admin"],
+  getPatientLabResults:     ["laboratory", "doctor", "staff", "admin"],
+  getAllLabResults:         ["laboratory", "doctor", "staff", "admin"],
   // pharmacy manages dispensing
-  dispensePrescription:  ["pharmacy", "staff", "admin"],
+  getMedicines:             ["pharmacy", "doctor", "staff", "admin"],
+  getPharmacyStats:         ["pharmacy", "staff", "admin"],
+  getPrescriptionsForPharmacy: ["pharmacy", "staff", "admin"],
+  getMedicinesWithStock:    ["pharmacy", "staff", "admin"],
+  dispensePrescription:     ["pharmacy", "staff", "admin"],
   // admin manages staff accounts
-  getAllStaffAccounts:   ["admin"],
-  getStaffAccountById:   ["admin"],
-  createStaffAccount:    ["admin"],
-  updateStaffAccount:    ["admin"],
-  resetStaffPassword:    ["admin"],
-  toggleStaffStatus:     ["admin"],
+  getAllStaffAccounts:      ["admin"],
+  getStaffAccountById:      ["admin"],
+  createStaffAccount:       ["admin"],
+  updateStaffAccount:       ["admin"],
+  resetStaffPassword:       ["admin"],
+  toggleStaffStatus:        ["admin"],
 };
 
 function checkRole(fnName: string, callerRole?: string): void {
   const allowed = ROLE_PERMISSIONS[fnName];
   if (!allowed) return; // no restriction defined — open function
-  if (!callerRole) throw new Error(`Unauthorized: authentication required for ${fnName}.`);
+  if (!callerRole) throw new Error(`Unauthorized access: authentication required for ${fnName}.`);
   if (!allowed.includes(callerRole)) {
-    throw new Error(`Unauthorized: role '${callerRole}' cannot perform '${fnName}'. Allowed: ${allowed.join(", ")}.`);
+    throw new Error(`Unauthorized access: role '${callerRole}' cannot perform '${fnName}'. Allowed: ${allowed.join(", ")}.`);
   }
 }
 

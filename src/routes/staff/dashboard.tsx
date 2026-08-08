@@ -54,7 +54,7 @@ function DashboardPage() {
   ] : [];
 
   return (
-    <StaffGuard allowedRoles={["reception", "staff"]}>
+    <StaffGuard allowedRoles={["reception", "staff", "admin"]}>
       <StaffLayout>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

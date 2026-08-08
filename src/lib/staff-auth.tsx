@@ -47,6 +47,12 @@ function readSession(): SessionData | null {
   } catch { return null; }
 }
 
+export function getStaffRole(): StaffRole {
+  if (typeof window === "undefined") return null;
+  const s = readSession();
+  return s?.role ?? null;
+}
+
 function writeSession(s: SessionData): void {
   try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch {}
 }

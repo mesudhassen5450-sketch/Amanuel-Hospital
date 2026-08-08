@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { useStaffAuth } from "@/lib/staff-auth";
+import { useStaffAuth, getStaffRole } from "@/lib/staff-auth";
 import { StaffLayout } from "@/components/staff/StaffLayout";
 import { StaffGuard } from "@/components/staff/StaffGuard";
 import {
@@ -116,17 +116,17 @@ function AdminDashboardPage() {
 
   // Fetch staff accounts
   const fetchStaffAccounts = async () => {
+    const role = user?.role || getStaffRole();
     try {
       setLoading(true);
-      setErrorState(null);
-      const data = await getAllStaffAccounts({ data: { callerRole: user?.role as string | undefined } });
+      const data = await getAllStaffAccounts({ data: { callerRole: role as string | undefined } });
       setStaffAccounts(data || []);
+      setErrorState(null);
     } catch (error: any) {
       const msg = error?.message || "Failed to load staff accounts.";
       console.error("Fetch staff accounts error:", msg);
       setErrorState(msg);
       toast.error(msg);
-      setStaffAccounts([]);
     } finally {
       setLoading(false);
     }
@@ -134,7 +134,7 @@ function AdminDashboardPage() {
 
   useEffect(() => {
     fetchStaffAccounts();
-  }, []);
+  }, [user]);
 
   // Stats calculations
   const totalStaff = staffAccounts.length;
@@ -185,7 +185,7 @@ function AdminDashboardPage() {
           role: editForm.role,
           displayName: editForm.displayName,
           isActive: editForm.isActive,
-          callerRole: user?.role as string | undefined,
+          callerRole: (user?.role || getStaffRole()) as string | undefined,
         },
       });
       toast.success("Staff account updated successfully");
@@ -224,7 +224,7 @@ function AdminDashboardPage() {
         data: {
           id: selectedStaff.id,
           newPassword: resetPasswordForm.newPassword,
-          callerRole: user?.role as string | undefined,
+          callerRole: (user?.role || getStaffRole()) as string | undefined,
         },
       });
       toast.success("Password reset successfully");
@@ -247,7 +247,7 @@ function AdminDashboardPage() {
     try {
       setFormLoading(true);
       await toggleStaffStatus({
-        data: { id: selectedStaff.id, callerRole: user?.role as string | undefined },
+        data: { id: selectedStaff.id, callerRole: (user?.role || getStaffRole()) as string | undefined },
       });
       toast.success(
         `Staff account ${selectedStaff.is_active ? "deactivated" : "activated"} successfully`

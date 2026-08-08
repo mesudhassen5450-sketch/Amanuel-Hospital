@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { useStaffAuth } from "@/lib/staff-auth";
+import { useStaffAuth, getStaffRole } from "@/lib/staff-auth";
 import { StaffLayout } from "@/components/staff/StaffLayout";
 import { StaffGuard } from "@/components/staff/StaffGuard";
 import {
@@ -92,10 +92,10 @@ function StaffAccountsPage() {
   const fetchStaffAccounts = async () => {
     try {
       setLoading(true);
-      const data = await getAllStaffAccounts({ data: { callerRole: user?.role as string | undefined } });
+      const role = user?.role || getStaffRole();
+      const data = await getAllStaffAccounts({ data: { callerRole: role as string | undefined } });
       setStaffAccounts(data);
     } catch (error: any) {
-      // Handle permission errors gracefully - treat as not admin rather than crash
       const errorMessage = error?.message || "Failed to fetch staff accounts";
       if (errorMessage.includes("permission") || errorMessage.includes("403") || errorMessage.includes("401")) {
         console.warn("Permission denied accessing staff accounts:", errorMessage);
@@ -103,7 +103,6 @@ function StaffAccountsPage() {
       } else {
         toast.error(errorMessage);
       }
-      // Set empty array to prevent UI crashes
       setStaffAccounts([]);
     } finally {
       setLoading(false);
@@ -112,7 +111,7 @@ function StaffAccountsPage() {
 
   useEffect(() => {
     fetchStaffAccounts();
-  }, []);
+  }, [user]);
 
   // Filter staff accounts
   const filteredStaff = staffAccounts.filter(

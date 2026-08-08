@@ -119,8 +119,18 @@ function AdminDashboardPage() {
     const role = user?.role || getStaffRole();
     try {
       setLoading(true);
-      const data = await getAllStaffAccounts({ data: { callerRole: role as string | undefined } });
-      setStaffAccounts(data || []);
+      const res = await getAllStaffAccounts({ data: { callerRole: role as string | undefined } });
+      let list: StaffAccount[] = [];
+      if (Array.isArray(res)) {
+        list = res;
+      } else if (res && typeof res === "object") {
+        if (Array.isArray((res as any).data)) {
+          list = (res as any).data;
+        } else if (Array.isArray((res as any).result)) {
+          list = (res as any).result;
+        }
+      }
+      setStaffAccounts(list);
       setErrorState(null);
     } catch (error: any) {
       const msg = error?.message || "Failed to load staff accounts.";

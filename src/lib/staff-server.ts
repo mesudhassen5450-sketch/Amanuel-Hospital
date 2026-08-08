@@ -1071,7 +1071,6 @@ export const getAllStaffAccounts = createServerFn({ method: "POST" })
 
     const { data: result, error } = await sb.rpc("get_all_staff_accounts");
     if (error) {
-      // Fallback: if RPC doesn't exist, query directly (service role bypasses RLS)
       console.error("RPC get_all_staff_accounts failed, using fallback:", error.message);
       const { data: accounts, error: directError } = await sb
         .from("staff_accounts")
@@ -1081,10 +1080,25 @@ export const getAllStaffAccounts = createServerFn({ method: "POST" })
       return accounts ?? [];
     }
 
-    const parsed = result as { success: boolean; data?: any[]; error?: string };
-    if (!parsed.success) throw new Error(parsed.error ?? "Failed to fetch staff accounts");
+    let parsed = result as any;
+    if (typeof parsed === "string") {
+      try { parsed = JSON.parse(parsed); } catch {}
+    }
 
-    return parsed.data ?? [];
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+
+    if (parsed && typeof parsed === "object") {
+      if (parsed.success === false) {
+        throw new Error(parsed.error ?? "Failed to fetch staff accounts");
+      }
+      if (Array.isArray(parsed.data)) {
+        return parsed.data;
+      }
+    }
+
+    return [];
   });
 
 // ── Get single staff account by ID (admin only) ───────────────────────────────

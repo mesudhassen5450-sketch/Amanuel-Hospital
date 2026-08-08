@@ -93,8 +93,18 @@ function StaffAccountsPage() {
     try {
       setLoading(true);
       const role = user?.role || getStaffRole();
-      const data = await getAllStaffAccounts({ data: { callerRole: role as string | undefined } });
-      setStaffAccounts(data);
+      const res = await getAllStaffAccounts({ data: { callerRole: role as string | undefined } });
+      let list: StaffAccount[] = [];
+      if (Array.isArray(res)) {
+        list = res;
+      } else if (res && typeof res === "object") {
+        if (Array.isArray((res as any).data)) {
+          list = (res as any).data;
+        } else if (Array.isArray((res as any).result)) {
+          list = (res as any).result;
+        }
+      }
+      setStaffAccounts(list);
     } catch (error: any) {
       const errorMessage = error?.message || "Failed to fetch staff accounts";
       if (errorMessage.includes("permission") || errorMessage.includes("403") || errorMessage.includes("401")) {

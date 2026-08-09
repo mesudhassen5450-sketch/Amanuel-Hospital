@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
-export type StaffRole = "admin" | "staff" | "reception" | "doctor" | "laboratory" | "pharmacy" | null;
+export type StaffRole = "admin" | "staff" | "reception" | "cashier" | "doctor" | "laboratory" | "pharmacy" | null;
 
 // ── Session constants ─────────────────────────────────────────────────────────
 const SESSION_KEY    = "staff_session";

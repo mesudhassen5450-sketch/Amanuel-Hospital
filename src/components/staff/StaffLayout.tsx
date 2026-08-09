@@ -17,11 +17,10 @@ const RECEPTION_NAV = [
 ];
 
 const ADMIN_NAV = [
-  { to: "/staff/admin",           label: "Admin Dashboard", icon: LayoutDashboard },
-  { to: "/staff/staff-accounts",  label: "Staff Accounts",  icon: Shield },
-  { to: "/staff/patients",        label: "Patients",        icon: Users },
-  { to: "/staff/appointments",    label: "Appointments",    icon: CalendarDays },
-  { to: "/staff/payments",        label: "Payments",        icon: CreditCard },
+  { to: "/staff/admin",        label: "Admin Dashboard", icon: LayoutDashboard },
+  { to: "/staff/patients",     label: "Patients",        icon: Users },
+  { to: "/staff/appointments", label: "Appointments",    icon: CalendarDays },
+  { to: "/staff/payments",     label: "Payments",        icon: CreditCard },
 ];
 
 const CASHIER_NAV = [

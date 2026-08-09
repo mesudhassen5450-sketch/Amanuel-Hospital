@@ -8,14 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ArrowLeft,
-  UserPlus,
-  Loader2,
-  Shield,
-  User,
-  Lock,
-} from "lucide-react";
+import { ArrowLeft, UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff/staff-accounts/create")({
@@ -28,49 +21,41 @@ export const Route = createFileRoute("/staff/staff-accounts/create")({
 function CreateStaffAccountPage() {
   const { user } = useStaffAuth();
   const [loading, setLoading] = useState(false);
-  
   const [formData, setFormData] = useState({
     displayName: "",
     username: "",
     password: "",
     confirmPassword: "",
-    role: "reception",
+    role: "staff",
     isActive: true,
   });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.displayName.trim()) {
-      newErrors.displayName = "Full name is required";
-    }
-
-    if (!formData.username.trim()) {
-      newErrors.username = "Username is required";
-    } else if (formData.username.length < 3) {
-      newErrors.username = "Username must be at least 3 characters";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    // Validation
+    if (!formData.displayName.trim()) {
+      toast.error("Full name is required");
+      return;
+    }
+    if (!formData.username.trim()) {
+      toast.error("Username is required");
+      return;
+    }
+    if (formData.username.length < 3) {
+      toast.error("Username must be at least 3 characters");
+      return;
+    }
+    if (!formData.password) {
+      toast.error("Password is required");
+      return;
+    }
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -78,18 +63,26 @@ function CreateStaffAccountPage() {
       setLoading(true);
       await createStaffAccount({
         data: {
-          username: formData.username,
+          username: formData.username.trim(),
           password: formData.password,
           role: formData.role,
-          displayName: formData.displayName,
+          displayName: formData.displayName.trim(),
           isActive: formData.isActive,
           callerRole: user?.role as string | undefined,
         },
       });
       toast.success("Staff account created successfully");
-      window.location.href = "/staff/staff-accounts";
+      // Reset form
+      setFormData({
+        displayName: "",
+        username: "",
+        password: "",
+        confirmPassword: "",
+        role: "staff",
+        isActive: true,
+      });
     } catch (error: any) {
-      toast.error(error.message || "Failed to create staff account");
+      toast.error(error?.message || "Failed to create staff account");
     } finally {
       setLoading(false);
     }
@@ -98,175 +91,151 @@ function CreateStaffAccountPage() {
   return (
     <StaffGuard allowedRoles={["admin"]}>
       <StaffLayout>
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-2xl mx-auto animate-fade-in">
           {/* Header */}
-          <div className="flex items-center gap-4">
-            <Link to="/staff/staff-accounts">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <ArrowLeft className="h-5 w-5" />
+          <div className="mb-6">
+            <Link to="/staff/admin">
+              <Button variant="ghost" className="gap-2 mb-4">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Admin Dashboard
               </Button>
             </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <UserPlus className="h-6 w-6 text-primary" />
-                Create Staff Account
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Add a new staff member to the system
-              </p>
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground font-display flex items-center gap-3">
+              <UserPlus className="h-8 w-8 text-primary" />
+              Create Staff Account
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add a new staff member to the hospital system
+            </p>
           </div>
 
           {/* Form Card */}
-          <Card className="border-border">
+          <Card className="border border-border/60 bg-card shadow-sm rounded-2xl">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                Staff Information
-              </CardTitle>
-              <CardDescription>
-                Fill in the details below to create a new staff account
+              <CardTitle className="text-lg font-bold font-display">Staff Account Details</CardTitle>
+              <CardDescription className="text-xs">
+                Enter the staff member's information below. All fields marked with * are required.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Full Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="displayName" className="flex items-center gap-1.5">
-                    <User className="h-4 w-4 text-primary" />
-                    Full Name
+                <div className="space-y-1.5">
+                  <Label htmlFor="displayName" className="text-xs font-semibold">
+                    Full Name *
                   </Label>
                   <Input
                     id="displayName"
                     value={formData.displayName}
                     onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                    placeholder="Enter full name"
-                    className={errors.displayName ? "border-destructive" : ""}
+                    placeholder="Enter staff member's full name"
+                    className="rounded-xl"
+                    disabled={loading}
                   />
-                  {errors.displayName && (
-                    <p className="text-sm text-destructive">{errors.displayName}</p>
-                  )}
                 </div>
 
                 {/* Username */}
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="flex items-center gap-1.5">
-                    <User className="h-4 w-4 text-primary" />
-                    Username
+                <div className="space-y-1.5">
+                  <Label htmlFor="username" className="text-xs font-semibold">
+                    Username *
                   </Label>
                   <Input
                     id="username"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
                     placeholder="Enter username (lowercase)"
-                    className={errors.username ? "border-destructive" : ""}
+                    className="rounded-xl font-mono text-sm"
+                    disabled={loading}
                   />
-                  {errors.username && (
-                    <p className="text-sm text-destructive">{errors.username}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Username will be automatically converted to lowercase
-                  </p>
-                </div>
-
-                {/* Role */}
-                <div className="space-y-2">
-                  <Label htmlFor="role" className="flex items-center gap-1.5">
-                    <Shield className="h-4 w-4 text-primary" />
-                    Role
-                  </Label>
-                  <select
-                    id="role"
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="reception">Reception</option>
-                    <option value="cashier">Cashier</option>
-                    <option value="doctor">Doctor</option>
-                    <option value="laboratory">Laboratory</option>
-                    <option value="pharmacy">Pharmacy</option>
-                    <option value="staff">Staff</option>
-                  </select>
-                  <p className="text-xs text-muted-foreground">
-                    Select the appropriate role for this staff member
+                  <p className="text-[11px] text-muted-foreground">
+                    Username must be at least 3 characters and will be stored in lowercase.
                   </p>
                 </div>
 
                 {/* Password */}
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="flex items-center gap-1.5">
-                    <Lock className="h-4 w-4 text-primary" />
-                    Password
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="text-xs font-semibold">
+                    Password *
                   </Label>
                   <Input
                     id="password"
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Enter password"
-                    className={errors.password ? "border-destructive" : ""}
+                    placeholder="Enter password (min 6 characters)"
+                    className="rounded-xl"
+                    disabled={loading}
                   />
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Password must be at least 6 characters long
-                  </p>
                 </div>
 
                 {/* Confirm Password */}
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="flex items-center gap-1.5">
-                    <Lock className="h-4 w-4 text-primary" />
-                    Confirm Password
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirmPassword" className="text-xs font-semibold">
+                    Confirm Password *
                   </Label>
                   <Input
                     id="confirmPassword"
                     type="password"
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    placeholder="Confirm password"
-                    className={errors.confirmPassword ? "border-destructive" : ""}
+                    placeholder="Re-enter password"
+                    className="rounded-xl"
+                    disabled={loading}
                   />
-                  {errors.confirmPassword && (
-                    <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-                  )}
+                </div>
+
+                {/* Role */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="role" className="text-xs font-semibold">
+                    Role *
+                  </Label>
+                  <select
+                    id="role"
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold outline-none"
+                    disabled={loading}
+                  >
+                    <option value="staff">Staff</option>
+                    <option value="reception">Reception</option>
+                    <option value="cashier">Cashier</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="laboratory">Laboratory</option>
+                    <option value="pharmacy">Pharmacy</option>
+                    <option value="admin">Admin</option>
+                  </select>
                 </div>
 
                 {/* Active Status */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pt-2">
                   <input
                     type="checkbox"
                     id="isActive"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="h-4 w-4"
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                    disabled={loading}
                   />
-                  <Label htmlFor="isActive" className="cursor-pointer">
-                    Active Account (user can log in immediately)
+                  <Label htmlFor="isActive" className="text-xs cursor-pointer font-medium">
+                    Active Account (Allowed to sign in)
                   </Label>
                 </div>
 
                 {/* Submit Button */}
-                <div className="flex gap-3 pt-4">
-                  <Link to="/staff/staff-accounts" className="flex-1">
-                    <Button variant="outline" className="w-full" type="button">
+                <div className="pt-4 flex gap-3">
+                  <Link to="/staff/admin" className="flex-1">
+                    <Button type="button" variant="outline" className="w-full rounded-xl text-xs" disabled={loading}>
                       Cancel
                     </Button>
                   </Link>
-                  <Button type="submit" disabled={loading} className="flex-1">
+                  <Button type="submit" className="flex-1 rounded-xl text-xs font-semibold" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Creating...
                       </>
                     ) : (
-                      <>
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Create Account
-                      </>
+                      "Create Staff Account"
                     )}
                   </Button>
                 </div>

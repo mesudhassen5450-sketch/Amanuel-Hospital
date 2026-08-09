@@ -21,7 +21,6 @@ import { Route as BookingRouteImport } from './routes/booking'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as StaffStaffAccountsRouteImport } from './routes/staff/staff-accounts'
 import { Route as StaffPaymentsRouteImport } from './routes/staff/payments'
 import { Route as StaffLoginRouteImport } from './routes/staff/login'
 import { Route as StaffDashboardRouteImport } from './routes/staff/dashboard'
@@ -104,11 +103,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StaffStaffAccountsRoute = StaffStaffAccountsRouteImport.update({
-  id: '/staff/staff-accounts',
-  path: '/staff/staff-accounts',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const StaffPaymentsRoute = StaffPaymentsRouteImport.update({
   id: '/staff/payments',
   path: '/staff/payments',
@@ -141,9 +135,9 @@ const StaffPatientsIndexRoute = StaffPatientsIndexRouteImport.update({
 } as any)
 const StaffStaffAccountsCreateRoute =
   StaffStaffAccountsCreateRouteImport.update({
-    id: '/create',
-    path: '/create',
-    getParentRoute: () => StaffStaffAccountsRoute,
+    id: '/staff/staff-accounts/create',
+    path: '/staff/staff-accounts/create',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const StaffPharmacyPrescriptionsRoute =
   StaffPharmacyPrescriptionsRouteImport.update({
@@ -237,7 +231,6 @@ export interface FileRoutesByFullPath {
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/payments': typeof StaffPaymentsRoute
-  '/staff/staff-accounts': typeof StaffStaffAccountsRouteWithChildren
   '/staff/doctor/dashboard': typeof StaffDoctorDashboardRoute
   '/staff/doctor/lab-results': typeof StaffDoctorLabResultsRoute
   '/staff/doctor/queue': typeof StaffDoctorQueueRoute
@@ -273,7 +266,6 @@ export interface FileRoutesByTo {
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/payments': typeof StaffPaymentsRoute
-  '/staff/staff-accounts': typeof StaffStaffAccountsRouteWithChildren
   '/staff/doctor/dashboard': typeof StaffDoctorDashboardRoute
   '/staff/doctor/lab-results': typeof StaffDoctorLabResultsRoute
   '/staff/doctor/queue': typeof StaffDoctorQueueRoute
@@ -310,7 +302,6 @@ export interface FileRoutesById {
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/payments': typeof StaffPaymentsRoute
-  '/staff/staff-accounts': typeof StaffStaffAccountsRouteWithChildren
   '/staff/doctor/dashboard': typeof StaffDoctorDashboardRoute
   '/staff/doctor/lab-results': typeof StaffDoctorLabResultsRoute
   '/staff/doctor/queue': typeof StaffDoctorQueueRoute
@@ -348,7 +339,6 @@ export interface FileRouteTypes {
     | '/staff/dashboard'
     | '/staff/login'
     | '/staff/payments'
-    | '/staff/staff-accounts'
     | '/staff/doctor/dashboard'
     | '/staff/doctor/lab-results'
     | '/staff/doctor/queue'
@@ -384,7 +374,6 @@ export interface FileRouteTypes {
     | '/staff/dashboard'
     | '/staff/login'
     | '/staff/payments'
-    | '/staff/staff-accounts'
     | '/staff/doctor/dashboard'
     | '/staff/doctor/lab-results'
     | '/staff/doctor/queue'
@@ -420,7 +409,6 @@ export interface FileRouteTypes {
     | '/staff/dashboard'
     | '/staff/login'
     | '/staff/payments'
-    | '/staff/staff-accounts'
     | '/staff/doctor/dashboard'
     | '/staff/doctor/lab-results'
     | '/staff/doctor/queue'
@@ -457,7 +445,6 @@ export interface RootRouteChildren {
   StaffDashboardRoute: typeof StaffDashboardRoute
   StaffLoginRoute: typeof StaffLoginRoute
   StaffPaymentsRoute: typeof StaffPaymentsRoute
-  StaffStaffAccountsRoute: typeof StaffStaffAccountsRouteWithChildren
   StaffDoctorDashboardRoute: typeof StaffDoctorDashboardRoute
   StaffDoctorLabResultsRoute: typeof StaffDoctorLabResultsRoute
   StaffDoctorQueueRoute: typeof StaffDoctorQueueRoute
@@ -470,6 +457,7 @@ export interface RootRouteChildren {
   StaffPharmacyDispensedRoute: typeof StaffPharmacyDispensedRoute
   StaffPharmacyInventoryRoute: typeof StaffPharmacyInventoryRoute
   StaffPharmacyPrescriptionsRoute: typeof StaffPharmacyPrescriptionsRoute
+  StaffStaffAccountsCreateRoute: typeof StaffStaffAccountsCreateRoute
   StaffPatientsIndexRoute: typeof StaffPatientsIndexRoute
   StaffDoctorPatientMrnRoute: typeof StaffDoctorPatientMrnRoute
   StaffLaboratoryPatientMrnRoute: typeof StaffLaboratoryPatientMrnRoute
@@ -561,13 +549,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/staff/staff-accounts': {
-      id: '/staff/staff-accounts'
-      path: '/staff/staff-accounts'
-      fullPath: '/staff/staff-accounts'
-      preLoaderRoute: typeof StaffStaffAccountsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/staff/payments': {
       id: '/staff/payments'
       path: '/staff/payments'
@@ -612,10 +593,10 @@ declare module '@tanstack/react-router' {
     }
     '/staff/staff-accounts/create': {
       id: '/staff/staff-accounts/create'
-      path: '/create'
+      path: '/staff/staff-accounts/create'
       fullPath: '/staff/staff-accounts/create'
       preLoaderRoute: typeof StaffStaffAccountsCreateRouteImport
-      parentRoute: typeof StaffStaffAccountsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/staff/pharmacy/prescriptions': {
       id: '/staff/pharmacy/prescriptions'
@@ -718,17 +699,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface StaffStaffAccountsRouteChildren {
-  StaffStaffAccountsCreateRoute: typeof StaffStaffAccountsCreateRoute
-}
-
-const StaffStaffAccountsRouteChildren: StaffStaffAccountsRouteChildren = {
-  StaffStaffAccountsCreateRoute: StaffStaffAccountsCreateRoute,
-}
-
-const StaffStaffAccountsRouteWithChildren =
-  StaffStaffAccountsRoute._addFileChildren(StaffStaffAccountsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -747,7 +717,6 @@ const rootRouteChildren: RootRouteChildren = {
   StaffDashboardRoute: StaffDashboardRoute,
   StaffLoginRoute: StaffLoginRoute,
   StaffPaymentsRoute: StaffPaymentsRoute,
-  StaffStaffAccountsRoute: StaffStaffAccountsRouteWithChildren,
   StaffDoctorDashboardRoute: StaffDoctorDashboardRoute,
   StaffDoctorLabResultsRoute: StaffDoctorLabResultsRoute,
   StaffDoctorQueueRoute: StaffDoctorQueueRoute,
@@ -760,6 +729,7 @@ const rootRouteChildren: RootRouteChildren = {
   StaffPharmacyDispensedRoute: StaffPharmacyDispensedRoute,
   StaffPharmacyInventoryRoute: StaffPharmacyInventoryRoute,
   StaffPharmacyPrescriptionsRoute: StaffPharmacyPrescriptionsRoute,
+  StaffStaffAccountsCreateRoute: StaffStaffAccountsCreateRoute,
   StaffPatientsIndexRoute: StaffPatientsIndexRoute,
   StaffDoctorPatientMrnRoute: StaffDoctorPatientMrnRoute,
   StaffLaboratoryPatientMrnRoute: StaffLaboratoryPatientMrnRoute,

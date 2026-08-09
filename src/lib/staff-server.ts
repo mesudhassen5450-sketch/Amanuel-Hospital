@@ -1071,34 +1071,15 @@ export const getAllStaffAccounts = createServerFn({ method: "POST" })
 
     const { data: result, error } = await sb.rpc("get_all_staff_accounts");
     if (error) {
-      console.error("RPC get_all_staff_accounts failed, using fallback:", error.message);
-      const { data: accounts, error: directError } = await sb
-        .from("staff_accounts")
-        .select("id, username, role, display_name, is_active, last_login, created_at, updated_at")
-        .order("created_at", { ascending: false });
-      if (directError) throw new Error(directError.message);
-      return accounts ?? [];
+      throw new Error(`Database error: ${error.message}. Please ensure supabase-phase9.5.sql has been executed.`);
     }
 
-    let parsed = result as any;
-    if (typeof parsed === "string") {
-      try { parsed = JSON.parse(parsed); } catch {}
+    const parsed = result as { success: boolean; data?: any[]; error?: string };
+    if (!parsed.success) {
+      throw new Error(parsed.error ?? "Failed to fetch staff accounts");
     }
 
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-
-    if (parsed && typeof parsed === "object") {
-      if (parsed.success === false) {
-        throw new Error(parsed.error ?? "Failed to fetch staff accounts");
-      }
-      if (Array.isArray(parsed.data)) {
-        return parsed.data;
-      }
-    }
-
-    return [];
+    return parsed.data ?? [];
   });
 
 // ── Get single staff account by ID (admin only) ───────────────────────────────
@@ -1110,19 +1091,13 @@ export const getStaffAccountById = createServerFn({ method: "POST" })
 
     const { data: result, error } = await sb.rpc("get_staff_account_by_id", { p_id: data.id });
     if (error) {
-      // Fallback: if RPC doesn't exist, query directly
-      console.error("RPC get_staff_account_by_id failed, using fallback:", error.message);
-      const { data: account, error: directError } = await sb
-        .from("staff_accounts")
-        .select("id, username, role, display_name, is_active, last_login, created_at, updated_at")
-        .eq("id", data.id)
-        .single();
-      if (directError) throw new Error(directError.message);
-      return account;
+      throw new Error(`Database error: ${error.message}. Please ensure supabase-phase9.5.sql has been executed.`);
     }
 
     const parsed = result as { success: boolean; data?: any; error?: string };
-    if (!parsed.success) throw new Error(parsed.error ?? "Failed to fetch staff account");
+    if (!parsed.success) {
+      throw new Error(parsed.error ?? "Failed to fetch staff account");
+    }
 
     return parsed.data;
   });
@@ -1155,11 +1130,13 @@ export const createStaffAccount = createServerFn({ method: "POST" })
     });
 
     if (error) {
-      throw new Error("SQL migration not executed. Please run supabase-phase9.5.sql in Supabase SQL editor at https://supabase.com/dashboard/project/effhdgpklekbwmvmqlfe/sql");
+      throw new Error(`Database error: ${error.message}. Please ensure supabase-phase9.5.sql has been executed.`);
     }
 
     const parsed = result as { success: boolean; data?: any; error?: string };
-    if (!parsed.success) throw new Error(parsed.error ?? "Failed to create staff account");
+    if (!parsed.success) {
+      throw new Error(parsed.error ?? "Failed to create staff account");
+    }
 
     return parsed.data;
   });
@@ -1187,24 +1164,13 @@ export const updateStaffAccount = createServerFn({ method: "POST" })
     });
 
     if (error) {
-      // Fallback: if RPC doesn't exist, update directly
-      console.error("RPC update_staff_account failed, using fallback:", error.message);
-      const { error: updateError } = await sb
-        .from("staff_accounts")
-        .update({
-          username: data.username.toLowerCase().trim(),
-          role: data.role,
-          display_name: data.displayName,
-          is_active: data.isActive,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", data.id);
-      if (updateError) throw new Error(updateError.message);
-      return { id: data.id, username: data.username, role: data.role, display_name: data.displayName, is_active: data.isActive };
+      throw new Error(`Database error: ${error.message}. Please ensure supabase-phase9.5.sql has been executed.`);
     }
 
     const parsed = result as { success: boolean; data?: any; error?: string };
-    if (!parsed.success) throw new Error(parsed.error ?? "Failed to update staff account");
+    if (!parsed.success) {
+      throw new Error(parsed.error ?? "Failed to update staff account");
+    }
 
     return parsed.data;
   });
@@ -1231,11 +1197,13 @@ export const resetStaffPassword = createServerFn({ method: "POST" })
     });
 
     if (error) {
-      throw new Error("SQL migration not executed. Please run supabase-phase9.5.sql in Supabase SQL editor at https://supabase.com/dashboard/project/effhdgpklekbwmvmqlfe/sql");
+      throw new Error(`Database error: ${error.message}. Please ensure supabase-phase9.5.sql has been executed.`);
     }
 
     const parsed = result as { success: boolean; message?: string; error?: string };
-    if (!parsed.success) throw new Error(parsed.error ?? "Failed to reset password");
+    if (!parsed.success) {
+      throw new Error(parsed.error ?? "Failed to reset password");
+    }
 
     return { success: true, message: parsed.message };
   });
@@ -1252,37 +1220,13 @@ export const toggleStaffStatus = createServerFn({ method: "POST" })
 
     const { data: result, error } = await sb.rpc("toggle_staff_account_status", { p_id: data.id });
     if (error) {
-      // Fallback: if RPC doesn't exist, toggle directly
-      console.error("RPC toggle_staff_account_status failed, using fallback:", error.message);
-      const { data: current, error: fetchError } = await sb
-        .from("staff_accounts")
-        .select("is_active, role")
-        .eq("id", data.id)
-        .single();
-      if (fetchError) throw new Error(fetchError.message);
-
-      // Prevent deactivating last admin
-      if (current.role === "admin" && current.is_active === true) {
-        const { data: admins } = await sb
-          .from("staff_accounts")
-          .select("id")
-          .eq("role", "admin")
-          .eq("is_active", true);
-        if (admins && admins.length <= 1) {
-          throw new Error("Cannot deactivate the last admin account");
-        }
-      }
-
-      const { error: updateError } = await sb
-        .from("staff_accounts")
-        .update({ is_active: !current.is_active, updated_at: new Date().toISOString() })
-        .eq("id", data.id);
-      if (updateError) throw new Error(updateError.message);
-      return { id: data.id, is_active: !current.is_active };
+      throw new Error(`Database error: ${error.message}. Please ensure supabase-phase9.5.sql has been executed.`);
     }
 
     const parsed = result as { success: boolean; data?: any; error?: string };
-    if (!parsed.success) throw new Error(parsed.error ?? "Failed to toggle staff status");
+    if (!parsed.success) {
+      throw new Error(parsed.error ?? "Failed to toggle staff status");
+    }
 
     return parsed.data;
   });

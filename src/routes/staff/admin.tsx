@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { useStaffAuth, getStaffRole } from "@/lib/staff-auth";
+import { useStaffAuth } from "@/lib/staff-auth";
 import { StaffLayout } from "@/components/staff/StaffLayout";
 import { StaffGuard } from "@/components/staff/StaffGuard";
 import {
@@ -116,21 +116,10 @@ function AdminDashboardPage() {
 
   // Fetch staff accounts
   const fetchStaffAccounts = async () => {
-    const role = user?.role || getStaffRole();
     try {
       setLoading(true);
-      const res = await getAllStaffAccounts({ data: { callerRole: role as string | undefined } });
-      let list: StaffAccount[] = [];
-      if (Array.isArray(res)) {
-        list = res;
-      } else if (res && typeof res === "object") {
-        if (Array.isArray((res as any).data)) {
-          list = (res as any).data;
-        } else if (Array.isArray((res as any).result)) {
-          list = (res as any).result;
-        }
-      }
-      setStaffAccounts(list);
+      const res = await getAllStaffAccounts({ data: { callerRole: user?.role as string | undefined } });
+      setStaffAccounts(res);
       setErrorState(null);
     } catch (error: any) {
       const msg = error?.message || "Failed to load staff accounts.";
@@ -257,7 +246,7 @@ function AdminDashboardPage() {
     try {
       setFormLoading(true);
       await toggleStaffStatus({
-        data: { id: selectedStaff.id, callerRole: (user?.role || getStaffRole()) as string | undefined },
+        data: { id: selectedStaff.id, callerRole: user?.role as string | undefined },
       });
       toast.success(
         `Staff account ${selectedStaff.is_active ? "deactivated" : "activated"} successfully`

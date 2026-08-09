@@ -223,10 +223,11 @@ function AdminDashboardPage() {
         data: {
           id: selectedStaff.id,
           newPassword: resetPasswordForm.newPassword,
-          callerRole: (user?.role || getStaffRole()) as string | undefined,
+          callerRole: user?.role as string | undefined,
         },
       });
       toast.success("Password reset successfully");
+      setResetPasswordForm({ newPassword: "", confirmPassword: "" });
       setResetPasswordDialogOpen(false);
     } catch (error: any) {
       toast.error(error?.message || "Failed to reset password");

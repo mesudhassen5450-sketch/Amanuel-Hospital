@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { VideoConsultationContainer } from "@/components/telemedicine/VideoConsultationContainer";
 import { ClinicalWorkflow } from "@/components/telemedicine/ClinicalWorkflow";
 import { PaymentGate } from "@/components/telemedicine/PaymentGate";
+import { processConsultationPayment } from "@/lib/telemedicine-server";
 
 export const Route = createFileRoute("/appointments/$appointmentId")({
   head: () => ({ meta: [{ title: "Video Consultation — Dr. Amanuel Hospital" }] }),
@@ -12,8 +13,8 @@ export const Route = createFileRoute("/appointments/$appointmentId")({
 function VideoConsultationPage() {
   const { appointmentId } = Route.useParams();
   
-  // Mock appointment data
-  const [appointment] = useState({
+  // Mock appointment data - in production, fetch from Supabase
+  const [appointment, setAppointment] = useState({
     id: appointmentId,
     patient_name: "John Doe",
     patient_age: 35,
@@ -21,6 +22,7 @@ function VideoConsultationPage() {
     primary_complaints: "Fever and headache",
     payment_status: "UNPAID",
     status: "SCHEDULED",
+    consultation_fee: 100,
     vitals: {
       temperature: "38.5°C",
       blood_pressure: "120/80",
@@ -30,11 +32,39 @@ function VideoConsultationPage() {
   });
 
   const [isPaid, setIsPaid] = useState(appointment.payment_status === "PAID");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  const handlePayment = () => {
-    // Mock payment handler
-    setIsPaid(true);
+  const handlePayment = async () => {
+    try {
+      setIsProcessingPayment(true);
+      await processConsultationPayment({
+        data: {
+          appointmentId: appointmentId,
+          amount: appointment.consultation_fee,
+        },
+      });
+      setAppointment({ ...appointment, payment_status: "PAID" });
+      setIsPaid(true);
+    } catch (error: any) {
+      console.error("Payment failed:", error);
+      alert("Payment failed. Please try again.");
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
+
+  // Listen for real-time payment status updates
+  useEffect(() => {
+    // In production, use Supabase Realtime to listen for payment_status changes
+    const interval = setInterval(() => {
+      // Mock: check if payment was made by doctor
+      if (appointment.payment_status === "PAID" && !isPaid) {
+        setIsPaid(true);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [appointment.payment_status, isPaid]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,6 +78,7 @@ function VideoConsultationPage() {
             appointment={appointment}
             isPaid={isPaid}
             onPayment={handlePayment}
+            isProcessingPayment={isProcessingPayment}
           />
         </div>
 

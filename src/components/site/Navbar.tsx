@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, Moon, Sun, Globe, MessageCircle } from "lucide-react";
+import { Menu, Moon, Sun, Globe, MessageCircle, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
 import { t, translations, type Lang } from "@/lib/translations";
 import logoImg from "@/assets/logo.jpg";
+import { VideoCallBadge } from "@/components/telemedicine/VideoCallBadge";
 
 const langOptions: { code: Lang; label: string; flag: string }[] = [
   { code: "en", label: "English",      flag: "🇬🇧" },
@@ -128,6 +129,9 @@ export function Navbar({ onOpenChat }: NavbarProps) {
             {t(tr.nav.aiAssistant, lang)}
             <MessageCircle className="h-3.5 w-3.5" />
           </Button>
+
+          {/* Video Call Badge — desktop */}
+          <VideoCallBadge />
 
           {/* Book appointment — desktop */}
           <Button asChild className="hidden rounded-xl md:inline-flex">

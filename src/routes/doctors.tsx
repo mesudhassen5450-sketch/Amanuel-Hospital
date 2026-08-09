@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { PageHero } from "@/components/site/PageHero";
 import { Reveal } from "@/components/site/Reveal";
@@ -7,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { doctors } from "@/lib/site-data";
 import { useLanguage } from "@/lib/language-context";
 import { t, translations, translatedDoctors } from "@/lib/translations";
+import { Video, CheckCircle, XCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { AvailableDoctorsModal } from "@/components/telemedicine/AvailableDoctorsModal";
 
 export const Route = createFileRoute("/doctors")({
   head: () => ({
@@ -24,13 +28,16 @@ export const Route = createFileRoute("/doctors")({
 function DoctorsPage() {
   const { lang } = useLanguage();
   const tr = translations.doctors;
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
 
   // Merge translated specialty/experience with photo from site-data
   const translatedList = translatedDoctors[lang].map((d, i) => ({
     ...d,
+    id: (i + 1).toString(),
     name:          doctors[i].name,
     photo:         doctors[i].photo,
     availableToday: doctors[i].availableToday,
+    isOnline: true, // Mock online status - in production, this would come from real-time data
   }));
 
   return (
@@ -56,24 +63,52 @@ function DoctorsPage() {
                       <h2 className="truncate font-display text-lg font-semibold">{doc.name}</h2>
                       <p className="mt-0.5 text-sm text-muted-foreground">{doc.specialty}</p>
                     </div>
-                    {doc.availableToday && (
-                      <Badge className="shrink-0 rounded-full bg-success/15 text-success hover:bg-success/15">
-                        {t(tr.available, lang)}
-                      </Badge>
-                    )}
+                    <Badge
+                      className={cn(
+                        "shrink-0 rounded-full",
+                        doc.isOnline
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                          : "bg-slate-500/10 text-slate-600 border-slate-500/20"
+                      )}
+                    >
+                      {doc.isOnline ? (
+                        <>
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Online
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Offline
+                        </>
+                      )}
+                    </Badge>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">{doc.experience}</p>
-                  <Button asChild className="mt-5 w-full rounded-xl">
-                    <Link to="/booking">
-                      {t(tr.bookAppt, lang)}
-                    </Link>
-                  </Button>
+                  <div className="mt-5 flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 rounded-xl gap-2"
+                      onClick={() => setVideoModalOpen(true)}
+                      disabled={!doc.isOnline}
+                    >
+                      <Video className="h-4 w-4" />
+                      Check Availability
+                    </Button>
+                    <Button asChild className="flex-1 rounded-xl">
+                      <Link to="/booking">
+                        {t(tr.bookAppt, lang)}
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </Reveal>
           ))}
         </div>
       </section>
+      
+      <AvailableDoctorsModal open={videoModalOpen} onOpenChange={setVideoModalOpen} />
     </SiteLayout>
   );
 }

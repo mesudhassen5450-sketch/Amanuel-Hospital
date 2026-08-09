@@ -6,9 +6,11 @@ import { cn } from "@/lib/utils";
 
 interface PaymentGateProps {
   onPayment: () => void;
+  isProcessingPayment?: boolean;
+  amount?: number;
 }
 
-export function PaymentGate({ onPayment }: PaymentGateProps) {
+export function PaymentGate({ onPayment, isProcessingPayment = false, amount = 100 }: PaymentGateProps) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePayment = () => {
@@ -46,8 +48,8 @@ export function PaymentGate({ onPayment }: PaymentGateProps) {
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-6 border border-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Consultation Fee</p>
-                <p className="text-2xl font-bold text-foreground font-display">100 ETB</p>
+                <p className="text-xs text-muted-foreground mb-1">Video Consultation Fee</p>
+                <p className="text-2xl font-bold text-foreground font-display">{amount} ETB</p>
               </div>
               <div className="bg-amber-500/10 p-3 rounded-lg">
                 <CreditCard className="h-6 w-6 text-amber-600" />
@@ -62,9 +64,9 @@ export function PaymentGate({ onPayment }: PaymentGateProps) {
               "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
             )}
             onClick={handlePayment}
-            disabled={isProcessing}
+            disabled={isProcessing || isProcessingPayment}
           >
-            {isProcessing ? (
+            {isProcessing || isProcessingPayment ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Processing Payment...

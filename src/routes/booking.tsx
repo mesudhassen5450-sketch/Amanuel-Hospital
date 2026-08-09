@@ -126,7 +126,8 @@ function BookingPage() {
           appointment_date: appointmentDate,
           appointment_time: selectedTime,
           payment_method: dbPaymentMethod,
-          amount: 300,
+          amount: 300, // In-person hospital visit fee
+          consultation_type: "IN_PERSON", // In-person visit
           payment_status: "pending",
           booking_status: "pending",
           transaction_reference: null,
@@ -332,9 +333,9 @@ function BookingPage() {
                 <Sparkles className="h-4 w-4 text-primary animate-pulse-soft" />
                 <span>Appointment Booking Form</span>
               </div>
-              <CardTitle className="mt-2 text-2xl font-bold font-display">Schedule Your Visit</CardTitle>
+              <CardTitle className="mt-2 text-2xl font-bold font-display">Schedule Your In-Person Visit</CardTitle>
               <CardDescription className="text-muted-foreground text-sm">
-                Provide your details, select a date & time, and pick your payment method to secure your slot.
+                Provide your details, select a date & time, and pick your payment method to secure your in-person hospital visit (300 ETB).
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit} className="space-y-6 p-6 sm:p-8" noValidate>

@@ -7,6 +7,7 @@ import { getDoctorStats } from "@/lib/staff-server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Clock, CheckCircle2, BadgeCheck, Loader2, RefreshCcw, Stethoscope, ListChecks } from "lucide-react";
+import { DoctorNotificationModal, useDoctorNotifications } from "@/components/telemedicine/DoctorNotificationModal";
 
 export const Route = createFileRoute("/staff/doctor/dashboard")({
   head: () => ({ meta: [{ title: "Doctor Dashboard — Dr. Amanuel Hospital" }] }),
@@ -17,6 +18,9 @@ function DoctorDashboardPage() {
   const { user } = useStaffAuth();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Doctor notification system for incoming video consultation requests
+  const { incomingRequest, modalOpen, setModalOpen } = useDoctorNotifications(user?.id || "doctor-1");
 
   const load = async () => {
     setLoading(true);
@@ -102,6 +106,12 @@ function DoctorDashboardPage() {
             </Card>
           </Link>
         </div>
+
+        <DoctorNotificationModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          request={incomingRequest}
+        />
       </StaffLayout>
     </StaffGuard>
   );

@@ -15,9 +15,11 @@ interface VideoConsultationContainerProps {
     patient_name: string;
     payment_status: string;
     status: string;
+    consultation_fee?: number;
   };
   isPaid: boolean;
   onPayment: () => void;
+  isProcessingPayment?: boolean;
 }
 
 export function VideoConsultationContainer({
@@ -25,6 +27,7 @@ export function VideoConsultationContainer({
   appointment,
   isPaid,
   onPayment,
+  isProcessingPayment = false,
 }: VideoConsultationContainerProps) {
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
@@ -211,7 +214,13 @@ export function VideoConsultationContainer({
         <CardContent className="p-0 h-full">
           
           {/* Payment Gate Overlay */}
-          {!isPaid && <PaymentGate onPayment={onPayment} />}
+          {!isPaid && (
+            <PaymentGate 
+              onPayment={onPayment} 
+              isProcessingPayment={isProcessingPayment}
+              amount={appointment.consultation_fee || 100}
+            />
+          )}
 
           {/* Video Grid */}
           <div className="grid grid-rows-2 h-full gap-2 p-2">

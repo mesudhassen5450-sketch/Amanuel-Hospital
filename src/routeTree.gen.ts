@@ -26,6 +26,7 @@ import { Route as StaffLoginRouteImport } from './routes/staff/login'
 import { Route as StaffDashboardRouteImport } from './routes/staff/dashboard'
 import { Route as StaffAppointmentsRouteImport } from './routes/staff/appointments'
 import { Route as StaffAdminRouteImport } from './routes/staff/admin'
+import { Route as AppointmentsAppointmentIdRouteImport } from './routes/appointments/$appointmentId'
 import { Route as StaffPatientsIndexRouteImport } from './routes/staff/patients/index'
 import { Route as StaffStaffAccountsCreateRouteImport } from './routes/staff/staff-accounts/create'
 import { Route as StaffPharmacyPrescriptionsRouteImport } from './routes/staff/pharmacy/prescriptions'
@@ -128,6 +129,12 @@ const StaffAdminRoute = StaffAdminRouteImport.update({
   path: '/staff/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppointmentsAppointmentIdRoute =
+  AppointmentsAppointmentIdRouteImport.update({
+    id: '/appointments/$appointmentId',
+    path: '/appointments/$appointmentId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const StaffPatientsIndexRoute = StaffPatientsIndexRouteImport.update({
   id: '/staff/patients/',
   path: '/staff/patients/',
@@ -226,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/staff/admin': typeof StaffAdminRoute
   '/staff/appointments': typeof StaffAppointmentsRoute
   '/staff/dashboard': typeof StaffDashboardRoute
@@ -261,6 +269,7 @@ export interface FileRoutesByTo {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/staff/admin': typeof StaffAdminRoute
   '/staff/appointments': typeof StaffAppointmentsRoute
   '/staff/dashboard': typeof StaffDashboardRoute
@@ -297,6 +306,7 @@ export interface FileRoutesById {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/staff/admin': typeof StaffAdminRoute
   '/staff/appointments': typeof StaffAppointmentsRoute
   '/staff/dashboard': typeof StaffDashboardRoute
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/appointments/$appointmentId'
     | '/staff/admin'
     | '/staff/appointments'
     | '/staff/dashboard'
@@ -369,6 +380,7 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/appointments/$appointmentId'
     | '/staff/admin'
     | '/staff/appointments'
     | '/staff/dashboard'
@@ -404,6 +416,7 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/appointments/$appointmentId'
     | '/staff/admin'
     | '/staff/appointments'
     | '/staff/dashboard'
@@ -440,6 +453,7 @@ export interface RootRouteChildren {
   PaymentSummaryRoute: typeof PaymentSummaryRoute
   ServicesRoute: typeof ServicesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  AppointmentsAppointmentIdRoute: typeof AppointmentsAppointmentIdRoute
   StaffAdminRoute: typeof StaffAdminRoute
   StaffAppointmentsRoute: typeof StaffAppointmentsRoute
   StaffDashboardRoute: typeof StaffDashboardRoute
@@ -584,6 +598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/appointments/$appointmentId': {
+      id: '/appointments/$appointmentId'
+      path: '/appointments/$appointmentId'
+      fullPath: '/appointments/$appointmentId'
+      preLoaderRoute: typeof AppointmentsAppointmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff/patients/': {
       id: '/staff/patients/'
       path: '/staff/patients'
@@ -712,6 +733,7 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentSummaryRoute: PaymentSummaryRoute,
   ServicesRoute: ServicesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  AppointmentsAppointmentIdRoute: AppointmentsAppointmentIdRoute,
   StaffAdminRoute: StaffAdminRoute,
   StaffAppointmentsRoute: StaffAppointmentsRoute,
   StaffDashboardRoute: StaffDashboardRoute,

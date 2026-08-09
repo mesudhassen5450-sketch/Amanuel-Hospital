@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, CreditCard, ArrowRight, Sparkles, Loader2, AlertCircle, CheckCircle2, User, Phone, Calendar as CalendarIcon2, BadgeCheck } from "lucide-react";
+import { CalendarIcon, Clock, CreditCard, ArrowRight, Sparkles, Loader2, AlertCircle, CheckCircle2, User, Phone, Calendar as CalendarIcon2, BadgeCheck, Stethoscope } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { PageHero } from "@/components/site/PageHero";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBooking, type BookingData } from "@/lib/booking-context";
 import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/translations";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import { doctors } from "@/lib/site-data";
 
 // Payment method mapping: UI value → database value
 const PAYMENT_DB_MAP: Record<string, string> = {
@@ -73,6 +75,7 @@ function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [selectedPayment, setSelectedPayment] = useState<"Telebirr" | "CBE Birr" | "Card / Other" | "Cash" | "">("");
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -102,6 +105,10 @@ function BookingPage() {
     if (!selectedPayment) {
       errs.paymentMethod = "Please select a payment method.";
     }
+
+    if (!selectedDoctorId) {
+      errs.doctor = "Please select a doctor for your appointment.";
+    }
     
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -126,6 +133,7 @@ function BookingPage() {
           appointment_date: appointmentDate,
           appointment_time: selectedTime,
           payment_method: dbPaymentMethod,
+          doctor_id: selectedDoctorId, // Include selected doctor ID
           amount: 300, // In-person hospital visit fee
           consultation_type: "IN_PERSON", // In-person visit
           payment_status: "pending",
@@ -381,6 +389,38 @@ function BookingPage() {
                       <p className="text-xs text-destructive flex items-center gap-1 font-medium">{errors.phoneNumber}</p>
                     )}
                   </div>
+                </div>
+
+                {/* Doctor Selection */}
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium flex items-center gap-1">
+                    <Stethoscope className="h-4 w-4 text-primary" />
+                    Select Doctor
+                  </Label>
+                  <Select
+                    value={selectedDoctorId}
+                    onValueChange={setSelectedDoctorId}
+                    disabled={loading}
+                  >
+                    <SelectTrigger
+                      className={cn(
+                        "rounded-xl h-11 border-input/60",
+                        errors.doctor && "border-destructive"
+                      )}
+                    >
+                      <SelectValue placeholder="Choose a doctor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {doctors.map((doctor) => (
+                        <SelectItem key={doctor.id} value={doctor.id}>
+                          {doctor.name} - {doctor.specialty}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.doctor && (
+                    <p className="text-xs text-destructive flex items-center gap-1 font-medium">{errors.doctor}</p>
+                  )}
                 </div>
 
                 {/* Calendar Picker (Date) */}

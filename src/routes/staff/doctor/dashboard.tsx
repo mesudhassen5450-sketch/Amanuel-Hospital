@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Clock, CheckCircle2, BadgeCheck, Loader2, RefreshCcw, Stethoscope, ListChecks } from "lucide-react";
 import { DoctorNotificationModal, useDoctorNotifications } from "@/components/telemedicine/DoctorNotificationModal";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff/doctor/dashboard")({
   head: () => ({ meta: [{ title: "Doctor Dashboard — Dr. Amanuel Hospital" }] }),
@@ -20,7 +22,9 @@ function DoctorDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   // Doctor notification system for incoming video consultation requests
-  const { incomingRequest, modalOpen, setModalOpen } = useDoctorNotifications(user?.id || "doctor-1");
+  // Use username as doctor identifier since StaffUser doesn't have id field
+  const doctorId = user?.username || "doctor-1";
+  const { incomingRequest, modalOpen, setModalOpen } = useDoctorNotifications(doctorId);
 
   const load = async () => {
     setLoading(true);
@@ -30,6 +34,57 @@ function DoctorDashboardPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Supabase Realtime subscription for general appointments
+  useEffect(() => {
+    if (!user?.username) return;
+
+    const channel = supabase
+      .channel(`doctor-dashboard-${user.username}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'appointments',
+          filter: `doctor_id=eq.${user.username}`,
+        },
+        (payload) => {
+          const newAppointment = payload.new as any;
+          
+          // Play notification sound
+          const audio = new Audio('/notification-sound.mp3');
+          audio.play().catch(console.error);
+          
+          // Show toast notification
+          toast.success('New Appointment', {
+            description: `${newAppointment.full_name} has booked an appointment`,
+            duration: 5000,
+          });
+          
+          // Refresh stats
+          load();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'appointments',
+          filter: `doctor_id=eq.${user.username}`,
+        },
+        (payload) => {
+          // Refresh stats when appointments are updated
+          load();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.username]);
 
   const CARDS = stats ? [
     { label: "Today's Patients", value: stats.todayPatients, icon: Users,         color: "text-primary",    bg: "bg-primary/10" },

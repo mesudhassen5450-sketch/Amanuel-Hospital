@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PaymentGate } from "./PaymentGate";
+import { PaymentGate } from "@/components/telemedicine/PaymentGate";
 import { createClient } from "@supabase/supabase-js";
 
 interface VideoConsultationContainerProps {
@@ -75,22 +75,26 @@ export function VideoConsultationContainer({
         videoTrackRef.current = null;
       }
 
-      // Leave channel
       if (clientRef.current) {
         await clientRef.current.leave();
-        clientRef.current = null;
+        setIsConnected(false);
       }
-
-      // Update Supabase
-      await supabase
+      
+      // Update Supabase with proper call end status
+      const sb = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY
+      );
+      
+      await sb
         .from("appointments")
         .update({
-          call_status: "COMPLETED",
+          visit_status: "completed",
+          call_status: "ENDED",
+          status: "COMPLETED",
           updated_at: new Date().toISOString(),
         })
         .eq("id", appointmentId);
-
-      setIsConnected(false);
     } catch (error) {
       console.error("Error ending call:", error);
     }

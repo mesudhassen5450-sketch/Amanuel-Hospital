@@ -11,6 +11,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Video, Phone, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { acceptConsultationRequest, declineConsultationRequest } from "@/lib/telemedicine-server";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 interface IncomingRequest {
   id: string;
@@ -153,28 +155,82 @@ export function useDoctorNotifications(doctorId: string) {
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    // In production, this would use Supabase Realtime to listen for new appointments
-    // with call_status = 'WAITING_FOR_DOCTOR' and doctor_id matching
-    
-    // Mock implementation for demonstration
-    const mockListen = () => {
-      // Simulate receiving a request after 10 seconds
-      setTimeout(() => {
-        setIncomingRequest({
-          id: "mock-appointment-" + Date.now(),
-          patientName: "John Doe",
-          phoneNumber: "+251 911 123 456",
-          consultationFee: 100,
-          createdAt: new Date().toISOString(),
-        });
-        setModalOpen(true);
-      }, 10000);
-    };
-
-    mockListen();
+    // Supabase Realtime subscription for incoming consultation requests
+    const channel = supabase
+      .channel(`doctor-appointments-${doctorId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'appointments',
+          filter: `doctor_id=eq.${doctorId}`,
+        },
+        async (payload) => {
+          const newAppointment = payload.new as any;
+          
+          // Only show notification for video consultations with waiting status
+          if (newAppointment.consultation_type === 'ONLINE' && newAppointment.call_status === 'WAITING_FOR_DOCTOR') {
+            // Play alert sound
+            const audio = new Audio('/notification-sound.mp3');
+            audio.play().catch(console.error);
+            
+            // Show toast notification
+            toast.success('New Video Consultation Request', {
+              description: `${newAppointment.patient_name} is requesting a video call`,
+              duration: 5000,
+            });
+            
+            setIncomingRequest({
+              id: newAppointment.id,
+              patientName: newAppointment.patient_name,
+              phoneNumber: newAppointment.phone_number,
+              consultationFee: newAppointment.consultation_fee || 100,
+              createdAt: newAppointment.created_at,
+            });
+            setModalOpen(true);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'appointments',
+          filter: `doctor_id=eq.${doctorId}`,
+        },
+        (payload) => {
+          const updatedAppointment = payload.new as any;
+          
+          // Handle call status changes for video consultations
+          if (updatedAppointment.consultation_type === 'ONLINE') {
+            if (updatedAppointment.call_status === 'RINGING' || updatedAppointment.call_status === 'CALLING') {
+              // Play incoming call sound
+              const audio = new Audio('/ringtone.mp3');
+              audio.play().catch(console.error);
+              
+              toast.info('Incoming Video Call', {
+                description: `${updatedAppointment.patient_name} is calling`,
+                duration: 10000,
+              });
+              
+              setIncomingRequest({
+                id: updatedAppointment.id,
+                patientName: updatedAppointment.patient_name,
+                phoneNumber: updatedAppointment.phone_number,
+                consultationFee: updatedAppointment.consultation_fee || 100,
+                createdAt: updatedAppointment.created_at,
+              });
+              setModalOpen(true);
+            }
+          }
+        }
+      )
+      .subscribe();
 
     return () => {
-      // Cleanup subscription
+      supabase.removeChannel(channel);
     };
   }, [doctorId]);
 

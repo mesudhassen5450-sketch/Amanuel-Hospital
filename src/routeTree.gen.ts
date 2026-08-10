@@ -27,6 +27,8 @@ import { Route as StaffDashboardRouteImport } from './routes/staff/dashboard'
 import { Route as StaffAppointmentsRouteImport } from './routes/staff/appointments'
 import { Route as StaffAdminRouteImport } from './routes/staff/admin'
 import { Route as AppointmentsAppointmentIdRouteImport } from './routes/appointments/$appointmentId'
+import { Route as ApiSendPushRouteImport } from './routes/api/send-push'
+import { Route as ApiAgoraTokenRouteImport } from './routes/api/agora-token'
 import { Route as StaffPatientsIndexRouteImport } from './routes/staff/patients/index'
 import { Route as StaffStaffAccountsCreateRouteImport } from './routes/staff/staff-accounts/create'
 import { Route as StaffPharmacyPrescriptionsRouteImport } from './routes/staff/pharmacy/prescriptions'
@@ -135,6 +137,16 @@ const AppointmentsAppointmentIdRoute =
     path: '/appointments/$appointmentId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiSendPushRoute = ApiSendPushRouteImport.update({
+  id: '/api/send-push',
+  path: '/api/send-push',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgoraTokenRoute = ApiAgoraTokenRouteImport.update({
+  id: '/api/agora-token',
+  path: '/api/agora-token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaffPatientsIndexRoute = StaffPatientsIndexRouteImport.update({
   id: '/staff/patients/',
   path: '/staff/patients/',
@@ -233,6 +245,8 @@ export interface FileRoutesByFullPath {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/agora-token': typeof ApiAgoraTokenRoute
+  '/api/send-push': typeof ApiSendPushRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/staff/admin': typeof StaffAdminRoute
   '/staff/appointments': typeof StaffAppointmentsRoute
@@ -269,6 +283,8 @@ export interface FileRoutesByTo {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/agora-token': typeof ApiAgoraTokenRoute
+  '/api/send-push': typeof ApiSendPushRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/staff/admin': typeof StaffAdminRoute
   '/staff/appointments': typeof StaffAppointmentsRoute
@@ -306,6 +322,8 @@ export interface FileRoutesById {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/agora-token': typeof ApiAgoraTokenRoute
+  '/api/send-push': typeof ApiSendPushRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/staff/admin': typeof StaffAdminRoute
   '/staff/appointments': typeof StaffAppointmentsRoute
@@ -344,6 +362,8 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/api/agora-token'
+    | '/api/send-push'
     | '/appointments/$appointmentId'
     | '/staff/admin'
     | '/staff/appointments'
@@ -380,6 +400,8 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/api/agora-token'
+    | '/api/send-push'
     | '/appointments/$appointmentId'
     | '/staff/admin'
     | '/staff/appointments'
@@ -416,6 +438,8 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/api/agora-token'
+    | '/api/send-push'
     | '/appointments/$appointmentId'
     | '/staff/admin'
     | '/staff/appointments'
@@ -453,6 +477,8 @@ export interface RootRouteChildren {
   PaymentSummaryRoute: typeof PaymentSummaryRoute
   ServicesRoute: typeof ServicesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiAgoraTokenRoute: typeof ApiAgoraTokenRoute
+  ApiSendPushRoute: typeof ApiSendPushRoute
   AppointmentsAppointmentIdRoute: typeof AppointmentsAppointmentIdRoute
   StaffAdminRoute: typeof StaffAdminRoute
   StaffAppointmentsRoute: typeof StaffAppointmentsRoute
@@ -605,6 +631,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppointmentsAppointmentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/send-push': {
+      id: '/api/send-push'
+      path: '/api/send-push'
+      fullPath: '/api/send-push'
+      preLoaderRoute: typeof ApiSendPushRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agora-token': {
+      id: '/api/agora-token'
+      path: '/api/agora-token'
+      fullPath: '/api/agora-token'
+      preLoaderRoute: typeof ApiAgoraTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff/patients/': {
       id: '/staff/patients/'
       path: '/staff/patients'
@@ -733,6 +773,8 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentSummaryRoute: PaymentSummaryRoute,
   ServicesRoute: ServicesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiAgoraTokenRoute: ApiAgoraTokenRoute,
+  ApiSendPushRoute: ApiSendPushRoute,
   AppointmentsAppointmentIdRoute: AppointmentsAppointmentIdRoute,
   StaffAdminRoute: StaffAdminRoute,
   StaffAppointmentsRoute: StaffAppointmentsRoute,

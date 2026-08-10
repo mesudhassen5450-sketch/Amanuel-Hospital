@@ -113,11 +113,7 @@ export function VideoConsultationContainer({
       return;
     }
 
-    const appId = import.meta.env.VITE_AGORA_APP_ID;
-    if (!appId) {
-      alert("Agora App ID not configured. Please check environment variables.");
-      return;
-    }
+    const appId = import.meta.env.VITE_AGORA_APP_ID || "db0b41794c224e549c92102892b75081";
 
     try {
       setIsConnecting(true);
@@ -126,12 +122,20 @@ export function VideoConsultationContainer({
       const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       clientRef.current = client;
 
-      // Generate user ID (mock: doctor_123 or patient_456)
-      const userId = `user_${Date.now()}`;
+      // Standardize channel name from appointment ID
       const channelName = `apt_${appointmentId}`;
+      const uid = 0; // Standard numeric user ID (Agora auto-assigns when set to 0)
 
-      // Join channel
-      await client.join(appId, channelName, null, userId);
+      // Fetch dynamic token from API route
+      const response = await fetch(`/api/agora-token?channelName=${channelName}&uid=${uid}`);
+      const data = await response.json();
+
+      if (!response.ok || !data.token) {
+        throw new Error(data.error || "Failed to retrieve valid Agora RTC token");
+      }
+
+      // Join Agora channel with dynamic token
+      await client.join(data.appId || appId, channelName, data.token, uid);
 
       // Create and publish audio track
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();

@@ -18,6 +18,7 @@ import { t } from "@/lib/translations";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { doctors } from "@/lib/site-data";
+import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";
 
 // Payment method mapping: UI value → database value
 const PAYMENT_DB_MAP: Record<string, string> = {
@@ -342,6 +343,12 @@ function BookingPage() {
         title={lang === "am" ? "ቀጠሮ ያስይዙ" : lang === "or" ? "Qaxaree Qabadhu" : "Book an Appointment"}
         subtitle={lang === "am" ? "እባክዎን ከዚህ በታች ያሉትን ዝርዝሮች በመሙላት ቀጠሮዎን ያጠናቅቁ" : lang === "or" ? "Odeeffannoo armaan gadii guutuun qaxaree keessan mirkaneessaa" : "Please fill in the details below to schedule your medical appointment."}
       />
+
+      <div className="pt-6 px-4">
+        <div className="mx-auto max-w-4xl">
+          <NotificationPermissionBanner userRole="patient" />
+        </div>
+      </div>
 
       <section className="py-12 md:py-20 px-4">
         <div className="mx-auto max-w-3xl">

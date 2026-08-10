@@ -10,6 +10,7 @@ import { Users, Clock, CheckCircle2, BadgeCheck, Loader2, RefreshCcw, Stethoscop
 import { DoctorNotificationModal, useDoctorNotifications } from "@/components/telemedicine/DoctorNotificationModal";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";
 
 export const Route = createFileRoute("/staff/doctor/dashboard")({
   head: () => ({ meta: [{ title: "Doctor Dashboard — Dr. Amanuel Hospital" }] }),
@@ -96,7 +97,7 @@ function DoctorDashboardPage() {
   return (
     <StaffGuard allowedRoles={["doctor", "staff"]}>
       <StaffLayout>
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground font-display flex items-center gap-2">
               <Stethoscope className="h-7 w-7 text-primary" /> Doctor Dashboard
@@ -106,10 +107,15 @@ function DoctorDashboardPage() {
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2 rounded-xl">
-            <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <NotificationPermissionBanner userId={activeDoctorId} userRole="doctor" compact />
+            <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2 rounded-xl">
+              <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+            </Button>
+          </div>
         </div>
+
+        <NotificationPermissionBanner userId={activeDoctorId} userRole="doctor" className="mb-6" />
 
         {loading ? (
           <div className="flex items-center justify-center h-48 text-muted-foreground gap-2">

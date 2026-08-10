@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
+import { sendPushToUserIdOrRole } from "../routes/api/send-push";
 
 function getSupabase() {
   const url = process.env["VITE_SUPABASE_URL"]
@@ -44,6 +45,13 @@ export const requestVideoConsultation = createServerFn({ method: "POST" })
       throw new Error(`Failed to create appointment: ${error.message}`);
     }
 
+    // Trigger Desktop Push Notification for doctor
+    sendPushToUserIdOrRole(doctorId, "doctor", {
+      title: "Incoming Video Consultation",
+      body: `${patientName} has requested an online video consultation.`,
+      url: `/staff/doctor/dashboard`,
+    }).catch((err) => console.error("Push notify doctor error:", err));
+
     return {
       appointmentId: appointment.id,
       message: "Consultation request sent successfully",
@@ -69,6 +77,17 @@ export const acceptConsultationRequest = createServerFn({ method: "POST" })
     if (error) {
       console.error("Accept Call Supabase Error:", error);
       throw new Error(`Failed to accept consultation: ${error.message}`);
+    }
+
+    // Trigger Desktop Push Notification for patient
+    if (updatedData && updatedData[0]) {
+      const apt = updatedData[0];
+      const targetUser = apt.patient_name || apt.phone_number || appointmentId;
+      sendPushToUserIdOrRole(targetUser, "patient", {
+        title: "Consultation Accepted",
+        body: "Dr. Amanuel Hospital doctor has accepted your video call. Click to join now.",
+        url: `/appointments/${appointmentId}`,
+      }).catch((err) => console.error("Push notify patient error:", err));
     }
 
     return { success: true, data: updatedData };

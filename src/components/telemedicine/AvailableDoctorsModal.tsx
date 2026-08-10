@@ -21,7 +21,7 @@ interface AvailableDoctorsModalProps {
 // Mock doctors data - in production, this would come from Supabase
 const MOCK_DOCTORS = [
   {
-    id: "1",
+    id: "doctor",
     name: "Dr. Amanuel Tesfaye",
     specialty: "General Medicine",
     isOnline: true,

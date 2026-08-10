@@ -124,6 +124,9 @@ function BookingPage() {
     const dbPaymentMethod = PAYMENT_DB_MAP[selectedPayment];
     const appointmentDate = format(selectedDate, "yyyy-MM-dd");
 
+    const selectedDoctor = doctors.find((d) => d.id === selectedDoctorId);
+    const doctorIdToPass = selectedDoctor?.id || selectedDoctorId || "doctor";
+
     try {
       const { data, error } = await supabase
         .from("appointments")
@@ -133,7 +136,7 @@ function BookingPage() {
           appointment_date: appointmentDate,
           appointment_time: selectedTime,
           payment_method: dbPaymentMethod,
-          doctor_id: selectedDoctorId, // Include selected doctor ID
+          doctor_id: doctorIdToPass,
           amount: 300, // In-person hospital visit fee
           consultation_type: "IN_PERSON", // In-person visit
           payment_status: "pending",

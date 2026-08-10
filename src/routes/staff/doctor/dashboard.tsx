@@ -23,7 +23,7 @@ function DoctorDashboardPage() {
 
   // Doctor notification system for incoming video consultation requests
   // Use username as doctor identifier since StaffUser doesn't have id field
-  const doctorId = user?.username || "doctor-1";
+  const doctorId = user?.username || "doctor";
   const { incomingRequest, modalOpen, setModalOpen } = useDoctorNotifications(doctorId);
 
   const load = async () => {
@@ -37,7 +37,10 @@ function DoctorDashboardPage() {
 
   // Supabase Realtime subscription for general appointments
   useEffect(() => {
-    if (!user?.username) return;
+    if (!user?.username) {
+      console.warn("[DoctorDashboard] Realtime subscription aborted: user.username is missing or undefined");
+      return;
+    }
 
     const channel = supabase
       .channel(`doctor-dashboard-${user.username}`)
@@ -53,12 +56,12 @@ function DoctorDashboardPage() {
           const newAppointment = payload.new as any;
           
           // Play notification sound
-          const audio = new Audio('/notification-sound.mp3');
+          const audio = new Audio('/notification-sound.wav');
           audio.play().catch(console.error);
           
           // Show toast notification
           toast.success('New Appointment', {
-            description: `${newAppointment.full_name} has booked an appointment`,
+            description: `${newAppointment.full_name || 'Patient'} has booked an appointment`,
             duration: 5000,
           });
           

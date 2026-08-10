@@ -155,6 +155,11 @@ export function useDoctorNotifications(doctorId: string) {
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
+    if (!doctorId) {
+      console.warn("[useDoctorNotifications] Realtime subscription aborted: doctorId / user.username is missing or undefined");
+      return;
+    }
+
     // Supabase Realtime subscription for incoming consultation requests
     const channel = supabase
       .channel(`doctor-appointments-${doctorId}`)
@@ -172,20 +177,20 @@ export function useDoctorNotifications(doctorId: string) {
           // Only show notification for video consultations with waiting status
           if (newAppointment.consultation_type === 'ONLINE' && newAppointment.call_status === 'WAITING_FOR_DOCTOR') {
             // Play alert sound
-            const audio = new Audio('/notification-sound.mp3');
+            const audio = new Audio('/notification-sound.wav');
             audio.play().catch(console.error);
             
             // Show toast notification
             toast.success('New Video Consultation Request', {
-              description: `${newAppointment.patient_name} is requesting a video call`,
+              description: `${newAppointment.patient_name || newAppointment.full_name || 'Patient'} is requesting a video call`,
               duration: 5000,
             });
             
             setIncomingRequest({
               id: newAppointment.id,
-              patientName: newAppointment.patient_name,
-              phoneNumber: newAppointment.phone_number,
-              consultationFee: newAppointment.consultation_fee || 100,
+              patientName: newAppointment.patient_name || newAppointment.full_name || 'Patient',
+              phoneNumber: newAppointment.phone_number || newAppointment.phone || '',
+              consultationFee: newAppointment.consultation_fee || newAppointment.amount || 100,
               createdAt: newAppointment.created_at,
             });
             setModalOpen(true);
@@ -207,19 +212,19 @@ export function useDoctorNotifications(doctorId: string) {
           if (updatedAppointment.consultation_type === 'ONLINE') {
             if (updatedAppointment.call_status === 'RINGING' || updatedAppointment.call_status === 'CALLING') {
               // Play incoming call sound
-              const audio = new Audio('/ringtone.mp3');
+              const audio = new Audio('/ringtone.wav');
               audio.play().catch(console.error);
               
               toast.info('Incoming Video Call', {
-                description: `${updatedAppointment.patient_name} is calling`,
+                description: `${updatedAppointment.patient_name || updatedAppointment.full_name || 'Patient'} is calling`,
                 duration: 10000,
               });
               
               setIncomingRequest({
                 id: updatedAppointment.id,
-                patientName: updatedAppointment.patient_name,
-                phoneNumber: updatedAppointment.phone_number,
-                consultationFee: updatedAppointment.consultation_fee || 100,
+                patientName: updatedAppointment.patient_name || updatedAppointment.full_name || 'Patient',
+                phoneNumber: updatedAppointment.phone_number || updatedAppointment.phone || '',
+                consultationFee: updatedAppointment.consultation_fee || updatedAppointment.amount || 100,
                 createdAt: updatedAppointment.created_at,
               });
               setModalOpen(true);

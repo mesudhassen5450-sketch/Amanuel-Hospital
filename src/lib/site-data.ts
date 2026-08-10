@@ -104,6 +104,7 @@ export const services: Service[] = [
 ];
 
 export interface Doctor {
+  id: string;
   name: string;
   specialty: string;
   experience: string;
@@ -113,13 +114,15 @@ export interface Doctor {
 
 export const doctors: Doctor[] = [
   {
-    name: "Doctor Picture 1",
+    id: "doctor",
+    name: "Dr. Amanuel Tesfaye",
     specialty: "General Surgeon · Medical Director",
     experience: "18+ years experience",
     availableToday: true,
     photo: doctor1,
   },
   {
+    id: "doctor2",
     name: "Doctor Picture 2",
     specialty: "Pediatrician",
     experience: "10+ years experience",
@@ -127,6 +130,7 @@ export const doctors: Doctor[] = [
     photo: doctor2,
   },
   {
+    id: "doctor3",
     name: "Doctor Picture 3",
     specialty: "Internal Medicine Specialist",
     experience: "22+ years experience",
@@ -134,6 +138,7 @@ export const doctors: Doctor[] = [
     photo: doctor3,
   },
   {
+    id: "doctor4",
     name: "Doctor Picture 4",
     specialty: "Obstetrician & Gynecologist",
     experience: "14+ years experience",
@@ -141,6 +146,7 @@ export const doctors: Doctor[] = [
     photo: doctor4,
   },
   {
+    id: "doctor5",
     name: "Doctor Picture 5",
     specialty: "Radiologist",
     experience: "9+ years experience",
@@ -148,6 +154,7 @@ export const doctors: Doctor[] = [
     photo: doctor5,
   },
   {
+    id: "doctor6",
     name: "Doctor Picture 6",
     specialty: "Emergency Medicine Physician",
     experience: "8+ years experience",

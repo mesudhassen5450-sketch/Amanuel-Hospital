@@ -38,17 +38,30 @@ export function DoctorNotificationModal({ open, onOpenChange, request }: DoctorN
 
     try {
       setStatus("accepting");
-      await acceptConsultationRequest({
-        data: { appointmentId: request.id },
-      });
+      const { data, error } = await supabase
+        .from("appointments")
+        .update({ 
+          call_status: "IN_CALL", 
+          booking_status: "confirmed" 
+        })
+        .eq("id", request.id)
+        .select();
+
+      if (error) {
+        console.error("Accept Call Supabase Error:", error);
+        toast.error(`Failed to accept consultation: ${error.message}`);
+        setStatus("idle");
+        return;
+      }
+
       setStatus("idle");
       onOpenChange(false);
       // Redirect to video room
       window.location.href = `/appointments/${request.id}`;
     } catch (error: any) {
-      console.error("Failed to accept consultation:", error);
+      console.error("Accept Call Supabase Error:", error);
+      toast.error(`Failed to accept consultation: ${error?.message || "Failed to accept consultation."}`);
       setStatus("idle");
-      alert("Failed to accept consultation. Please try again.");
     }
   };
 
@@ -57,15 +70,28 @@ export function DoctorNotificationModal({ open, onOpenChange, request }: DoctorN
 
     try {
       setStatus("declining");
-      await declineConsultationRequest({
-        data: { appointmentId: request.id },
-      });
+      const { data, error } = await supabase
+        .from("appointments")
+        .update({
+          call_status: "DECLINED",
+          booking_status: "cancelled"
+        })
+        .eq("id", request.id)
+        .select();
+
+      if (error) {
+        console.error("Decline Call Supabase Error:", error);
+        toast.error(`Failed to decline consultation: ${error.message}`);
+        setStatus("idle");
+        return;
+      }
+
       setStatus("idle");
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Failed to decline consultation:", error);
+      console.error("Decline Call Supabase Error:", error);
+      toast.error(`Failed to decline consultation: ${error?.message || "Failed to decline consultation."}`);
       setStatus("idle");
-      alert("Failed to decline consultation. Please try again.");
     }
   };
 

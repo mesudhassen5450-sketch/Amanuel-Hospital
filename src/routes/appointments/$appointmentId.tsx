@@ -4,6 +4,8 @@ import { VideoConsultationContainer } from "@/components/telemedicine/VideoConsu
 import { ClinicalWorkflow } from "@/components/telemedicine/ClinicalWorkflow";
 import { PaymentGate } from "@/components/telemedicine/PaymentGate";
 import { processConsultationPayment } from "@/lib/telemedicine-server";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/appointments/$appointmentId")({
   head: () => ({ meta: [{ title: "Video Consultation — Dr. Amanuel Hospital" }] }),
@@ -37,17 +39,32 @@ function VideoConsultationPage() {
   const handlePayment = async () => {
     try {
       setIsProcessingPayment(true);
-      await processConsultationPayment({
-        data: {
-          appointmentId: appointmentId,
-          amount: appointment.consultation_fee,
-        },
-      });
-      setAppointment({ ...appointment, payment_status: "PAID" });
+      
+      const { data, error } = await supabase
+        .from("appointments")
+        .update({
+          payment_status: "paid",
+          call_status: "IN_PROGRESS",
+          paid_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", appointmentId)
+        .select();
+
+      if (error) {
+        console.error("Payment Supabase Error:", error);
+        toast.error(`Payment failed: ${error.message}`);
+        alert(`Payment failed: ${error.message}`);
+        return;
+      }
+
+      setAppointment((prev) => ({ ...prev, payment_status: "PAID" }));
       setIsPaid(true);
+      toast.success("Payment completed successfully!");
     } catch (error: any) {
       console.error("Payment failed:", error);
-      alert("Payment failed. Please try again.");
+      toast.error(`Payment failed: ${error?.message || "Payment failed. Please try again."}`);
+      alert(`Payment failed: ${error?.message || "Payment failed. Please try again."}`);
     } finally {
       setIsProcessingPayment(false);
     }

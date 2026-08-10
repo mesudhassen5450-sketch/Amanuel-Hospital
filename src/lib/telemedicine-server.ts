@@ -56,19 +56,22 @@ export const acceptConsultationRequest = createServerFn({ method: "POST" })
     const { appointmentId } = data;
     const sb = getSupabase();
 
-    const { error } = await sb
+    const { data: updatedData, error } = await sb
       .from("appointments")
       .update({
-        call_status: "DOCTOR_AVAILABLE",
+        call_status: "IN_CALL",
+        booking_status: "confirmed",
         updated_at: new Date().toISOString(),
       })
-      .eq("id", appointmentId);
+      .eq("id", appointmentId)
+      .select();
 
     if (error) {
+      console.error("Accept Call Supabase Error:", error);
       throw new Error(`Failed to accept consultation: ${error.message}`);
     }
 
-    return { success: true };
+    return { success: true, data: updatedData };
   });
 
 export const declineConsultationRequest = createServerFn({ method: "POST" })

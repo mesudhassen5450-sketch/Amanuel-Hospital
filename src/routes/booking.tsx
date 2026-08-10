@@ -141,6 +141,7 @@ function BookingPage() {
           consultation_type: "IN_PERSON", // In-person visit
           payment_status: "pending",
           booking_status: "pending",
+          status: "PENDING",
           transaction_reference: null,
           chapa_transaction_id: null,
           note: null,

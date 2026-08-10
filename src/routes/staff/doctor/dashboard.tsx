@@ -17,14 +17,13 @@ export const Route = createFileRoute("/staff/doctor/dashboard")({
 });
 
 function DoctorDashboardPage() {
-  const { user } = useStaffAuth();
+  const { user, hydrated } = useStaffAuth();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Doctor notification system for incoming video consultation requests
-  // Use username as doctor identifier since StaffUser doesn't have id field
-  const doctorId = user?.username || "doctor";
-  const { incomingRequest, modalOpen, setModalOpen } = useDoctorNotifications(doctorId);
+  // Safely resolve activeDoctorId using multiple property fallbacks
+  const activeDoctorId = user?.username || (user as any)?.id || (user as any)?.email?.split('@')[0] || "doctor";
+  const { incomingRequest, modalOpen, setModalOpen } = useDoctorNotifications(activeDoctorId);
 
   const load = async () => {
     setLoading(true);
@@ -37,20 +36,18 @@ function DoctorDashboardPage() {
 
   // Supabase Realtime subscription for general appointments
   useEffect(() => {
-    if (!user?.username) {
-      console.warn("[DoctorDashboard] Realtime subscription aborted: user.username is missing or undefined");
-      return;
-    }
+    // Wait until auth session hydration completes or user activeDoctorId is resolved
+    if (!hydrated && !user) return;
 
     const channel = supabase
-      .channel(`doctor-dashboard-${user.username}`)
+      .channel(`doctor-dashboard-${activeDoctorId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'appointments',
-          filter: `doctor_id=eq.${user.username}`,
+          filter: `doctor_id=eq.${activeDoctorId}`,
         },
         (payload) => {
           const newAppointment = payload.new as any;
@@ -61,7 +58,7 @@ function DoctorDashboardPage() {
           
           // Show toast notification
           toast.success('New Appointment', {
-            description: `${newAppointment.full_name || 'Patient'} has booked an appointment`,
+            description: `${newAppointment.full_name || newAppointment.patient_name || 'Patient'} has booked an appointment`,
             duration: 5000,
           });
           
@@ -75,7 +72,7 @@ function DoctorDashboardPage() {
           event: 'UPDATE',
           schema: 'public',
           table: 'appointments',
-          filter: `doctor_id=eq.${user.username}`,
+          filter: `doctor_id=eq.${activeDoctorId}`,
         },
         (payload) => {
           // Refresh stats when appointments are updated
@@ -87,7 +84,7 @@ function DoctorDashboardPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.username]);
+  }, [activeDoctorId, hydrated, user]);
 
   const CARDS = stats ? [
     { label: "Today's Patients", value: stats.todayPatients, icon: Users,         color: "text-primary",    bg: "bg-primary/10" },

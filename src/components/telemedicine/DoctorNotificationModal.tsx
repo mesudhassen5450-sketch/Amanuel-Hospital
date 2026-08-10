@@ -155,21 +155,18 @@ export function useDoctorNotifications(doctorId: string) {
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    if (!doctorId) {
-      console.warn("[useDoctorNotifications] Realtime subscription aborted: doctorId / user.username is missing or undefined");
-      return;
-    }
+    const activeDoctorId = doctorId || "doctor";
 
     // Supabase Realtime subscription for incoming consultation requests
     const channel = supabase
-      .channel(`doctor-appointments-${doctorId}`)
+      .channel(`doctor-appointments-${activeDoctorId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'appointments',
-          filter: `doctor_id=eq.${doctorId}`,
+          filter: `doctor_id=eq.${activeDoctorId}`,
         },
         async (payload) => {
           const newAppointment = payload.new as any;
@@ -203,7 +200,7 @@ export function useDoctorNotifications(doctorId: string) {
           event: 'UPDATE',
           schema: 'public',
           table: 'appointments',
-          filter: `doctor_id=eq.${doctorId}`,
+          filter: `doctor_id=eq.${activeDoctorId}`,
         },
         (payload) => {
           const updatedAppointment = payload.new as any;

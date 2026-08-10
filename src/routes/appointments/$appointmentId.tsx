@@ -5,6 +5,7 @@ import { ClinicalWorkflow } from "@/components/telemedicine/ClinicalWorkflow";
 import { PaymentGate } from "@/components/telemedicine/PaymentGate";
 import { processConsultationPayment } from "@/lib/telemedicine-server";
 import { supabase } from "@/lib/supabase";
+import { getStaffRole } from "@/lib/staff-auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/appointments/$appointmentId")({
@@ -14,6 +15,10 @@ export const Route = createFileRoute("/appointments/$appointmentId")({
 
 function VideoConsultationPage() {
   const { appointmentId } = Route.useParams();
+
+  // Detect doctor / staff session to bypass payment modal completely
+  const staffRole = getStaffRole();
+  const isDoctor = staffRole === "doctor" || staffRole === "staff" || staffRole === "admin" || (typeof window !== "undefined" && !!sessionStorage.getItem("staff_session"));
   
   // Mock appointment data - in production, fetch from Supabase
   const [appointment, setAppointment] = useState({
@@ -22,7 +27,7 @@ function VideoConsultationPage() {
     patient_age: 35,
     patient_gender: "Male",
     primary_complaints: "Fever and headache",
-    payment_status: "UNPAID",
+    payment_status: isDoctor ? "paid" : "unpaid",
     status: "SCHEDULED",
     consultation_fee: 100,
     vitals: {
@@ -33,7 +38,7 @@ function VideoConsultationPage() {
     },
   });
 
-  const [isPaid, setIsPaid] = useState(appointment.payment_status === "PAID");
+  const [isPaid, setIsPaid] = useState(isDoctor || appointment.payment_status === "paid" || appointment.payment_status === "PAID");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const handlePayment = async () => {
@@ -44,27 +49,23 @@ function VideoConsultationPage() {
         .from("appointments")
         .update({
           payment_status: "paid",
-          call_status: "IN_PROGRESS",
           paid_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          booking_status: "confirmed"
         })
-        .eq("id", appointmentId)
-        .select();
+        .eq("id", appointmentId);
 
       if (error) {
-        console.error("Payment Supabase Error:", error);
-        toast.error(`Payment failed: ${error.message}`);
-        alert(`Payment failed: ${error.message}`);
+        console.error("Payment update failed:", error);
+        toast.error(`Payment status update failed: ${error.message}`);
         return;
       }
 
-      setAppointment((prev) => ({ ...prev, payment_status: "PAID" }));
+      setAppointment((prev) => ({ ...prev, payment_status: "paid", booking_status: "confirmed" }));
       setIsPaid(true);
       toast.success("Payment completed successfully!");
     } catch (error: any) {
-      console.error("Payment failed:", error);
-      toast.error(`Payment failed: ${error?.message || "Payment failed. Please try again."}`);
-      alert(`Payment failed: ${error?.message || "Payment failed. Please try again."}`);
+      console.error("Payment update failed:", error);
+      toast.error(`Payment status update failed: ${error?.message || "Payment failed. Please try again."}`);
     } finally {
       setIsProcessingPayment(false);
     }

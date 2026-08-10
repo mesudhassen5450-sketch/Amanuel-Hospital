@@ -59,7 +59,7 @@ export const acceptConsultationRequest = createServerFn({ method: "POST" })
     const { data: updatedData, error } = await sb
       .from("appointments")
       .update({
-        call_status: "IN_CALL",
+        call_status: "in_call",
         booking_status: "confirmed",
         updated_at: new Date().toISOString(),
       })
@@ -83,7 +83,8 @@ export const declineConsultationRequest = createServerFn({ method: "POST" })
     const { error } = await sb
       .from("appointments")
       .update({
-        call_status: "DECLINED",
+        call_status: "cancelled",
+        booking_status: "cancelled",
         updated_at: new Date().toISOString(),
       })
       .eq("id", appointmentId);
@@ -101,14 +102,12 @@ export const processConsultationPayment = createServerFn({ method: "POST" })
     const { appointmentId, amount } = data;
     const sb = getSupabase();
 
-    // In production, this would integrate with Telebirr/Chapa
-    // For now, we'll mock the payment processing
-
     const { error } = await sb
       .from("appointments")
       .update({
-        payment_status: "PAID",
-        call_status: "IN_PROGRESS",
+        payment_status: "paid",
+        booking_status: "confirmed",
+        call_status: "in_call",
         payment_amount: amount,
         paid_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

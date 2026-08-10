@@ -7,6 +7,7 @@ import { Mic, MicOff, Video, VideoOff, PhoneOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PaymentGate } from "@/components/telemedicine/PaymentGate";
 import { createClient } from "@supabase/supabase-js";
+import { getStaffRole } from "@/lib/staff-auth";
 
 interface VideoConsultationContainerProps {
   appointmentId: string;
@@ -33,6 +34,11 @@ export function VideoConsultationContainer({
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+
+  // Check if current user is doctor or staff to bypass payment gate completely
+  const staffRole = getStaffRole();
+  const isDoctor = staffRole === "doctor" || staffRole === "staff" || staffRole === "admin" || (typeof window !== "undefined" && !!sessionStorage.getItem("staff_session"));
+  const effectiveIsPaid = isPaid || isDoctor;
   
   // Agora refs
   const clientRef = useRef<any>(null);
@@ -90,7 +96,7 @@ export function VideoConsultationContainer({
         .from("appointments")
         .update({
           visit_status: "completed",
-          call_status: "ENDED",
+          call_status: "ended",
           status: "COMPLETED",
           updated_at: new Date().toISOString(),
         })
@@ -101,8 +107,8 @@ export function VideoConsultationContainer({
   };
 
   const handleConnect = async () => {
-    // Payment verification check
-    if (!isPaid) {
+    // Payment verification check - doctors bypass completely
+    if (!effectiveIsPaid) {
       alert("Payment required to join video consultation. Please complete payment first.");
       return;
     }
@@ -206,7 +212,7 @@ export function VideoConsultationContainer({
             {appointment.status}
           </Badge>
         </div>
-        {!isPaid && (
+        {!effectiveIsPaid && (
           <Badge variant="destructive" className="text-xs font-medium">
             Unpaid (100 ETB Required)
           </Badge>
@@ -218,7 +224,7 @@ export function VideoConsultationContainer({
         <CardContent className="p-0 h-full">
           
           {/* Payment Gate Overlay */}
-          {!isPaid && (
+          {!effectiveIsPaid && (
             <PaymentGate 
               onPayment={onPayment} 
               isProcessingPayment={isProcessingPayment}

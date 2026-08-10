@@ -41,7 +41,7 @@ export function DoctorNotificationModal({ open, onOpenChange, request }: DoctorN
       const { data, error } = await supabase
         .from("appointments")
         .update({ 
-          call_status: "IN_CALL", 
+          call_status: "in_call", 
           booking_status: "confirmed" 
         })
         .eq("id", request.id)

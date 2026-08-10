@@ -52,8 +52,10 @@ const paymentMethods = [
 // Type for the confirmed booking returned from Supabase
 interface ConfirmedAppointment {
   id: string;
-  full_name: string;
-  phone: string;
+  full_name?: string;
+  patient_name?: string;
+  phone?: string;
+  phone_number?: string;
   appointment_date: string;
   appointment_time: string;
   payment_method: string;
@@ -131,17 +133,21 @@ function BookingPage() {
       const { data, error } = await supabase
         .from("appointments")
         .insert({
+          patient_name: form.fullName.trim(),
           full_name: form.fullName.trim(),
+          phone_number: form.phoneNumber.trim(),
           phone: form.phoneNumber.trim(),
           appointment_date: appointmentDate,
           appointment_time: selectedTime,
           payment_method: dbPaymentMethod,
           doctor_id: doctorIdToPass,
-          amount: 300, // In-person hospital visit fee
-          consultation_type: "IN_PERSON", // In-person visit
+          amount: 300,
+          consultation_type: "IN_PERSON",
           payment_status: "pending",
           booking_status: "pending",
           status: "PENDING",
+          visit_status: "booked",
+          call_status: "WAITING_FOR_DOCTOR",
           transaction_reference: null,
           chapa_transaction_id: null,
           note: null,
@@ -238,7 +244,7 @@ function BookingPage() {
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Patient Name</p>
-                        <p className="font-semibold text-foreground">{confirmed.full_name}</p>
+                        <p className="font-semibold text-foreground">{confirmed.full_name || confirmed.patient_name}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -247,7 +253,7 @@ function BookingPage() {
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Phone Number</p>
-                        <p className="font-semibold text-foreground">{confirmed.phone}</p>
+                        <p className="font-semibold text-foreground">{confirmed.phone || confirmed.phone_number}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

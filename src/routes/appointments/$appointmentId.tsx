@@ -2,106 +2,191 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { VideoConsultationContainer } from "@/components/telemedicine/VideoConsultationContainer";
 import { ClinicalWorkflow } from "@/components/telemedicine/ClinicalWorkflow";
-import { PaymentGate } from "@/components/telemedicine/PaymentGate";
-import { processConsultationPayment } from "@/lib/telemedicine-server";
 import { supabase } from "@/lib/supabase";
 import { getStaffRole } from "@/lib/staff-auth";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/appointments/$appointmentId")({
   head: () => ({ meta: [{ title: "Video Consultation — Dr. Amanuel Hospital" }] }),
   component: VideoConsultationPage,
 });
 
+// ── helpers ───────────────────────────────────────────────────────────────────
+function calcAge(dob?: string | null): number | null {
+  if (!dob) return null;
+  const diff = Date.now() - new Date(dob).getTime();
+  return Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000));
+}
+
 function VideoConsultationPage() {
   const { appointmentId } = Route.useParams();
 
-  // Detect doctor / staff session to bypass payment modal completely
+  // ── Auth: is this a doctor/staff session? ───────────────────────────────────
   const staffRole = getStaffRole();
-  const isDoctor = staffRole === "doctor" || staffRole === "staff" || staffRole === "admin" || (typeof window !== "undefined" && !!sessionStorage.getItem("staff_session"));
-  
-  // Mock appointment data - in production, fetch from Supabase
-  const [appointment, setAppointment] = useState({
-    id: appointmentId,
-    patient_name: "John Doe",
-    patient_age: 35,
-    patient_gender: "Male",
-    primary_complaints: "Fever and headache",
-    payment_status: isDoctor ? "paid" : "unpaid",
-    status: "SCHEDULED",
-    consultation_fee: 100,
-    vitals: {
-      temperature: "38.5°C",
-      blood_pressure: "120/80",
-      heart_rate: "85 bpm",
-      weight: "70 kg",
-    },
-  });
+  const isDoctor =
+    staffRole === "doctor" ||
+    staffRole === "staff" ||
+    staffRole === "admin" ||
+    (typeof window !== "undefined" && !!sessionStorage.getItem("staff_session"));
 
-  const [isPaid, setIsPaid] = useState(isDoctor || appointment.payment_status === "paid" || appointment.payment_status === "PAID");
+  // ── State ───────────────────────────────────────────────────────────────────
+  const [loadingAppt, setLoadingAppt]   = useState(true);
+  const [appointment, setAppointment]   = useState<any>(null);
+  const [isPaid, setIsPaid]             = useState(isDoctor);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
+  // ── Fetch appointment + patient from Supabase ───────────────────────────────
+  useEffect(() => {
+    (async () => {
+      setLoadingAppt(true);
+      try {
+        // Parse appointment ID from room string (e.g. "apt_53" → "53") or use directly
+        const numericId = String(appointmentId).replace(/^apt_/i, "");
+
+        const { data, error } = await supabase
+          .from("appointments")
+          .select("*, patient:patients(*)")
+          .eq("id", numericId)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          const patient = data.patient;
+          const age = calcAge(patient?.date_of_birth);
+          setAppointment({
+            id:              String(data.id),
+            // Patient info — live from DB
+            patient_name:    data.full_name
+                              ?? patient?.full_name
+                              ?? "Guest Patient",
+            phone:           data.phone ?? patient?.phone ?? "",
+            patient_age:     age ?? null,
+            patient_gender:  patient?.gender ?? data.gender ?? null,
+            primary_complaints:
+                             data.reason_for_visit
+                              ?? data.symptoms
+                              ?? data.reason
+                              ?? data.chief_complaint
+                              ?? "Online Video Consultation",
+            // Payment / status
+            payment_status:  data.payment_status,
+            status:          data.status ?? "SCHEDULED",
+            consultation_fee: data.amount ?? data.consultation_fee ?? 100,
+            // Vitals — show "N/A" if not recorded
+            vitals: {
+              temperature:   patient?.temperature   ?? data.temperature   ?? "N/A",
+              blood_pressure: patient?.blood_pressure ?? data.blood_pressure ?? "N/A",
+              heart_rate:    patient?.heart_rate    ?? data.heart_rate    ?? "N/A",
+              weight:        patient?.weight        ?? data.weight        ?? "N/A",
+            },
+            // Extra
+            doctor_name:     data.doctor_name ?? "Dr. Amanuel Tesfaye",
+          });
+          // Doctor bypasses payment; patients need paid status
+          setIsPaid(
+            isDoctor ||
+            data.payment_status === "paid" ||
+            data.payment_status === "PAID"
+          );
+        } else {
+          // Appointment not found — use safe fallbacks
+          setAppointment({
+            id:               appointmentId,
+            patient_name:     "Guest Patient",
+            phone:            "",
+            patient_age:      null,
+            patient_gender:   null,
+            primary_complaints: "Online Video Consultation",
+            payment_status:   isDoctor ? "paid" : "unpaid",
+            status:           "SCHEDULED",
+            consultation_fee: 100,
+            vitals:           { temperature: "N/A", blood_pressure: "N/A", heart_rate: "N/A", weight: "N/A" },
+            doctor_name:      "Dr. Amanuel Tesfaye",
+          });
+          setIsPaid(isDoctor);
+        }
+      } catch (err: any) {
+        console.error("Failed to load appointment:", err);
+        toast.error("Could not load appointment details.");
+        // Safe fallback so the page still renders
+        setAppointment({
+          id:               appointmentId,
+          patient_name:     "Guest Patient",
+          phone:            "",
+          patient_age:      null,
+          patient_gender:   null,
+          primary_complaints: "Online Video Consultation",
+          payment_status:   isDoctor ? "paid" : "unpaid",
+          status:           "SCHEDULED",
+          consultation_fee: 100,
+          vitals:           { temperature: "N/A", blood_pressure: "N/A", heart_rate: "N/A", weight: "N/A" },
+          doctor_name:      "Dr. Amanuel Tesfaye",
+        });
+        setIsPaid(isDoctor);
+      } finally {
+        setLoadingAppt(false);
+      }
+    })();
+  }, [appointmentId, isDoctor]);
+
+  // ── Cash payment handler ─────────────────────────────────────────────────────
   const handlePayment = async () => {
     try {
       setIsProcessingPayment(true);
-      
-      const { data, error } = await supabase
+      const numericId = String(appointmentId).replace(/^apt_/i, "");
+      const { error } = await supabase
         .from("appointments")
         .update({
           payment_status: "paid",
-          paid_at: new Date().toISOString(),
-          booking_status: "confirmed"
+          paid_at:        new Date().toISOString(),
+          booking_status: "confirmed",
+          updated_at:     new Date().toISOString(),
         })
-        .eq("id", appointmentId);
+        .eq("id", numericId);
 
-      if (error) {
-        console.error("Payment update failed:", error);
-        toast.error(`Payment status update failed: ${error.message}`);
-        return;
-      }
+      if (error) { toast.error(`Payment failed: ${error.message}`); return; }
 
-      setAppointment((prev) => ({ ...prev, payment_status: "paid", booking_status: "confirmed" }));
+      setAppointment((prev: any) => ({ ...prev, payment_status: "paid" }));
       setIsPaid(true);
       toast.success("Payment completed successfully!");
-    } catch (error: any) {
-      console.error("Payment update failed:", error);
-      toast.error(`Payment status update failed: ${error?.message || "Payment failed. Please try again."}`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Payment failed. Please try again.");
     } finally {
       setIsProcessingPayment(false);
     }
   };
 
-  // Listen for real-time payment status updates
-  useEffect(() => {
-    // In production, use Supabase Realtime to listen for payment_status changes
-    const interval = setInterval(() => {
-      // Mock: check if payment was made by doctor
-      if (appointment.payment_status === "PAID" && !isPaid) {
-        setIsPaid(true);
-      }
-    }, 3000);
+  // ── Loading state ─────────────────────────────────────────────────────────────
+  if (loadingAppt) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground gap-2">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <span className="text-sm">Loading appointment...</span>
+      </div>
+    );
+  }
 
-    return () => clearInterval(interval);
-  }, [appointment.payment_status, isPaid]);
-
+  // ── Main layout — 80% video / 20% sidebar ─────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
-      {/* Desktop Split View Layout */}
       <div className="flex flex-col lg:flex-row min-h-screen">
-        
-        {/* Left Panel - Video Consultation (60-70% on desktop) */}
-        <div className="flex-1 lg:w-[65%] p-4 lg:p-6 bg-slate-50 dark:bg-slate-900/50">
+
+        {/* Left — Video area (80%) */}
+        <div className="flex-1 lg:w-[80%] p-4 lg:p-5 bg-slate-50 dark:bg-slate-900/50 min-h-[60vh] lg:min-h-screen">
           <VideoConsultationContainer
-            appointmentId={appointmentId}
+            appointmentId={String(appointment.id)}
             appointment={appointment}
             isPaid={isPaid}
             onPayment={handlePayment}
             isProcessingPayment={isProcessingPayment}
+            isDoctor={isDoctor}
           />
         </div>
 
-        {/* Right Panel - Clinical Workflow (30-40% on desktop) */}
-        <div className="lg:w-[35%] p-4 lg:p-6 bg-card border-l border-border">
+        {/* Right — Sidebar (20%) */}
+        <div className="lg:w-[20%] min-w-[240px] p-4 lg:p-4 bg-card border-l border-border overflow-y-auto">
           <ClinicalWorkflow appointment={appointment} />
         </div>
 

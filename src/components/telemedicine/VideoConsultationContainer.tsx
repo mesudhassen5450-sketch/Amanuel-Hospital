@@ -7,7 +7,6 @@ import { Mic, MicOff, Video, VideoOff, PhoneOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PaymentGate } from "@/components/telemedicine/PaymentGate";
 import { createClient } from "@supabase/supabase-js";
-import { getStaffRole } from "@/lib/staff-auth";
 
 interface VideoConsultationContainerProps {
   appointmentId: string;
@@ -21,6 +20,8 @@ interface VideoConsultationContainerProps {
   isPaid: boolean;
   onPayment: () => void;
   isProcessingPayment?: boolean;
+  /** Pass true when the logged-in user is a doctor/staff — controls video layout */
+  isDoctor?: boolean;
 }
 
 export function VideoConsultationContainer({
@@ -29,6 +30,7 @@ export function VideoConsultationContainer({
   isPaid,
   onPayment,
   isProcessingPayment = false,
+  isDoctor = false,
 }: VideoConsultationContainerProps) {
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
@@ -36,16 +38,17 @@ export function VideoConsultationContainer({
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Check if current user is doctor or staff to bypass payment gate completely
-  const staffRole = getStaffRole();
-  const isDoctor = staffRole === "doctor" || staffRole === "staff" || staffRole === "admin" || (typeof window !== "undefined" && !!sessionStorage.getItem("staff_session"));
   const effectiveIsPaid = isPaid || isDoctor;
   
   // Agora refs
   const clientRef = useRef<any>(null);
   const audioTrackRef = useRef<any>(null);
   const videoTrackRef = useRef<any>(null);
-  const remoteVideoRef = useRef<HTMLDivElement>(null);
-  const localVideoRef = useRef<HTMLDivElement>(null);
+  const [remoteConnected, setRemoteConnected] = useState(false);
+
+  // Stable DOM IDs for Agora to attach video tracks
+  const LOCAL_VIDEO_ID  = `local-video-${appointmentId}`;
+  const REMOTE_VIDEO_ID = `remote-video-${appointmentId}`;
 
   // Supabase client
   const supabase = createClient(
@@ -107,9 +110,8 @@ export function VideoConsultationContainer({
   };
 
   const handleConnect = async () => {
-    // Payment verification check - doctors bypass completely
     if (!effectiveIsPaid) {
-      alert("Payment required to join video consultation. Please complete payment first.");
+      alert("Payment required to join video consultation.");
       return;
     }
 
@@ -118,58 +120,57 @@ export function VideoConsultationContainer({
     try {
       setIsConnecting(true);
 
-      // Initialize Agora client
+      // Role-based distinct UID so Doctor and Patient don't share the same ID
+      const uid = isDoctor ? 1001 : 2002;
+
       const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       clientRef.current = client;
 
-      // Standardize channel name from appointment ID
-      const channelName = `apt_${appointmentId}`;
-      const uid = 0; // Standard numeric user ID (Agora auto-assigns when set to 0)
+      const channelName = `apt_${String(appointmentId).replace(/^apt_/i, "")}`;
 
-      // Fetch dynamic token from API route
+      // Fetch token
       const response = await fetch(`/api/agora-token?channelName=${channelName}&uid=${uid}`);
       const data = await response.json();
-
       if (!response.ok || !data.token) {
         throw new Error(data.error || "Failed to retrieve valid Agora RTC token");
       }
 
-      // Join Agora channel with dynamic token
       await client.join(data.appId || appId, channelName, data.token, uid);
 
-      // Create and publish audio track
-      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+      // Local tracks
+      const [audioTrack, videoTrack] = await Promise.all([
+        AgoraRTC.createMicrophoneAudioTrack(),
+        AgoraRTC.createCameraVideoTrack(),
+      ]);
       audioTrackRef.current = audioTrack;
-
-      // Create and publish video track
-      const videoTrack = await AgoraRTC.createCameraVideoTrack();
       videoTrackRef.current = videoTrack;
-
-      // Publish tracks
       await client.publish([audioTrack, videoTrack]);
 
-      // Play local video
-      if (localVideoRef.current) {
-        videoTrack.play(localVideoRef.current);
-      }
+      // Play local video in the 25% PIP container (string ID)
+      videoTrack.play(LOCAL_VIDEO_ID);
 
-      // Handle remote user published
-      client.on("user-published", async (user, mediaType) => {
-        await client.subscribe(user, mediaType);
-        
-        if (mediaType === "video" && remoteVideoRef.current) {
-          user.videoTrack?.play(remoteVideoRef.current);
+      // ── Subscribe to remote participant tracks ──────────────────────────
+      client.on("user-published", async (remoteUser, mediaType) => {
+        await client.subscribe(remoteUser, mediaType);
+        if (mediaType === "video") {
+          // Play remote stream in the 75% dominant container (string ID)
+          remoteUser.videoTrack?.play(REMOTE_VIDEO_ID);
+          setRemoteConnected(true);
         }
         if (mediaType === "audio") {
-          user.audioTrack?.play();
+          remoteUser.audioTrack?.play();
         }
       });
 
-      // Handle remote user unpublished
-      client.on("user-unpublished", (user) => {
-        if (remoteVideoRef.current) {
-          user.videoTrack?.stop();
+      client.on("user-unpublished", (remoteUser, mediaType) => {
+        if (mediaType === "video") {
+          remoteUser.videoTrack?.stop();
+          setRemoteConnected(false);
         }
+      });
+
+      client.on("user-left", () => {
+        setRemoteConnected(false);
       });
 
       setIsConnecting(false);
@@ -236,28 +237,20 @@ export function VideoConsultationContainer({
             />
           )}
 
-          {/* Video Grid */}
-          <div className="grid grid-rows-2 h-full gap-2 p-2">
-            
-            {/* Remote Participant (Patient) */}
-            <div 
-              ref={remoteVideoRef}
+          {/* Video Grid — 75% dominant remote / 25% local PIP */}
+          <div className="flex flex-col h-full gap-2 p-2">
+
+            {/* Remote participant — 75% — Doctor sees patient, Patient sees doctor */}
+            <div
+              id={REMOTE_VIDEO_ID}
               className="relative bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center"
+              style={{ flex: "3" }}
             >
-              {isConnected ? (
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-24 h-24 bg-slate-600 rounded-full mx-auto mb-3 flex items-center justify-center">
-                      <span className="text-3xl font-bold text-white">{appointment.patient_name.charAt(0)}</span>
-                    </div>
-                    <p className="text-white font-medium">{appointment.patient_name}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 text-slate-400 animate-spin mb-2" />
+              {!remoteConnected && (
+                <div className="text-center pointer-events-none">
+                  <Loader2 className="h-8 w-8 text-slate-400 animate-spin mb-2 mx-auto" />
                   <p className="text-slate-400 text-sm">
-                    {isConnecting ? "Connecting..." : "Waiting for participant..."}
+                    {isConnecting ? "Connecting..." : isConnected ? "Waiting for remote participant..." : "Waiting for participant..."}
                   </p>
                   {!isPaid && (
                     <p className="text-slate-500 text-xs mt-1">Payment required to join</p>
@@ -266,24 +259,28 @@ export function VideoConsultationContainer({
               )}
             </div>
 
-            {/* Local Participant (You) */}
-            <div 
-              ref={localVideoRef}
+            {/* Local participant — 25% — PIP self-preview */}
+            <div
+              id={LOCAL_VIDEO_ID}
               className="relative bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center"
+              style={{ flex: "1" }}
             >
-              {isCameraOff ? (
-                <div className="text-center">
-                  <VideoOff className="h-12 w-12 text-slate-500 mx-auto mb-2" />
-                  <p className="text-slate-400 text-sm">Camera Off</p>
+              {isCameraOff && (
+                <div className="text-center pointer-events-none">
+                  <VideoOff className="h-8 w-8 text-slate-500 mx-auto mb-1" />
+                  <p className="text-slate-400 text-xs">Camera Off</p>
                 </div>
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-20 h-20 bg-slate-600 rounded-full mx-auto mb-2 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-white">You</span>
-                    </div>
-                    <p className="text-white font-medium text-sm">You</p>
+              )}
+              {!isConnected && !isCameraOff && (
+                <div className="text-center pointer-events-none">
+                  <div className="w-12 h-12 bg-slate-600 rounded-full mx-auto mb-1 flex items-center justify-center">
+                    <span className="text-base font-bold text-white">
+                      {isDoctor ? "Dr" : "Me"}
+                    </span>
                   </div>
+                  <p className="text-white text-xs font-medium">
+                    {isDoctor ? "You (Doctor)" : "You (Patient)"}
+                  </p>
                 </div>
               )}
             </div>

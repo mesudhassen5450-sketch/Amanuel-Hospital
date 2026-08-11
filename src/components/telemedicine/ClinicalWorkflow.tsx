@@ -25,15 +25,18 @@ import { cn } from "@/lib/utils";
 interface ClinicalWorkflowProps {
   appointment: {
     patient_name: string;
-    patient_age: number;
-    patient_gender: string;
-    primary_complaints: string;
-    vitals: {
-      temperature: string;
-      blood_pressure: string;
-      heart_rate: string;
-      weight: string;
-    };
+    phone?: string | null;
+    patient_age?: number | null;
+    patient_gender?: string | null;
+    primary_complaints?: string | null;
+    doctor_name?: string | null;
+    consultation_fee?: number | null;
+    vitals?: {
+      temperature?: string | null;
+      blood_pressure?: string | null;
+      heart_rate?: string | null;
+      weight?: string | null;
+    } | null;
   };
 }
 
@@ -113,22 +116,46 @@ export function ClinicalWorkflow({ appointment }: ClinicalWorkflowProps) {
         </CardHeader>
         {expandedSection === "patient" && (
           <CardContent className="pt-0 space-y-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3">
+              Patient Summary
+            </p>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
+              <div className="col-span-2">
                 <Label className="text-xs text-muted-foreground">Name</Label>
-                <p className="font-medium text-foreground">{appointment.patient_name}</p>
+                <p className="font-medium text-foreground">{appointment.patient_name || "Guest Patient"}</p>
+                {appointment.phone && (
+                  <p className="text-xs text-muted-foreground">{appointment.phone}</p>
+                )}
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Age</Label>
-                <p className="font-medium text-foreground">{appointment.patient_age} years</p>
+                <p className="font-medium text-foreground">
+                  {appointment.patient_age != null ? `${appointment.patient_age} years` : "Not specified"}
+                </p>
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Gender</Label>
-                <p className="font-medium text-foreground">{appointment.patient_gender}</p>
+                <p className="font-medium text-foreground">
+                  {appointment.patient_gender || "Not specified"}
+                </p>
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs text-muted-foreground">Primary Complaint</Label>
+                <p className="font-medium text-foreground">
+                  {appointment.primary_complaints || "Online Video Consultation"}
+                </p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Primary Complaint</Label>
-                <p className="font-medium text-foreground">{appointment.primary_complaints}</p>
+                <Label className="text-xs text-muted-foreground">Doctor</Label>
+                <p className="font-medium text-foreground text-xs">
+                  {appointment.doctor_name || "Dr. Amanuel Tesfaye"}
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Fee</Label>
+                <p className="font-medium text-foreground">
+                  {appointment.consultation_fee != null ? `${appointment.consultation_fee} ETB` : "100 ETB"}
+                </p>
               </div>
             </div>
 
@@ -141,28 +168,28 @@ export function ClinicalWorkflow({ appointment }: ClinicalWorkflowProps) {
                   <Thermometer className="h-4 w-4 text-amber-600" />
                   <div>
                     <p className="text-[10px] text-muted-foreground">Temperature</p>
-                    <p className="text-xs font-semibold">{appointment.vitals.temperature}</p>
+                    <p className="text-xs font-semibold">{appointment.vitals?.temperature || "N/A"}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
                   <Activity className="h-4 w-4 text-red-600" />
                   <div>
                     <p className="text-[10px] text-muted-foreground">Blood Pressure</p>
-                    <p className="text-xs font-semibold">{appointment.vitals.blood_pressure}</p>
+                    <p className="text-xs font-semibold">{appointment.vitals?.blood_pressure || "N/A"}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
                   <Heart className="h-4 w-4 text-rose-600" />
                   <div>
                     <p className="text-[10px] text-muted-foreground">Heart Rate</p>
-                    <p className="text-xs font-semibold">{appointment.vitals.heart_rate}</p>
+                    <p className="text-xs font-semibold">{appointment.vitals?.heart_rate || "N/A"}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
                   <Scale className="h-4 w-4 text-blue-600" />
                   <div>
                     <p className="text-[10px] text-muted-foreground">Weight</p>
-                    <p className="text-xs font-semibold">{appointment.vitals.weight}</p>
+                    <p className="text-xs font-semibold">{appointment.vitals?.weight || "N/A"}</p>
                   </div>
                 </div>
               </div>

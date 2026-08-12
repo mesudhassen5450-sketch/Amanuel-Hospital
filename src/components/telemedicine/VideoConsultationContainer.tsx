@@ -123,10 +123,47 @@ export function VideoConsultationContainer({
       // Role-based distinct UID so Doctor and Patient don't share the same ID
       const uid = isDoctor ? 1001 : 2002;
 
+      // Normalize channel name - both Doctor and Patient must join the EXACT same channel
+      const channelName = String(appointmentId).trim();
+
+      console.log('Agora: Connecting to channel:', channelName, 'with UID:', uid, 'as Doctor:', isDoctor);
+
       const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       clientRef.current = client;
 
-      const channelName = `apt_${String(appointmentId).replace(/^apt_/i, "")}`;
+      // ── Set up event listeners BEFORE calling join() ──────────────────────────
+      client.on("user-published", async (remoteUser, mediaType) => {
+        console.log('Agora: Remote user published:', remoteUser.uid, mediaType);
+        await client.subscribe(remoteUser, mediaType);
+        
+        if (mediaType === "video") {
+          // Wait brief moment for remote container DOM element
+          setTimeout(() => {
+            const container = document.getElementById(REMOTE_VIDEO_ID);
+            if (container) {
+              remoteUser.videoTrack?.play(REMOTE_VIDEO_ID);
+            }
+          }, 100);
+          setRemoteConnected(true);
+        }
+        
+        if (mediaType === "audio") {
+          remoteUser.audioTrack?.play();
+        }
+      });
+
+      client.on("user-unpublished", (remoteUser, mediaType) => {
+        console.log('Agora: Remote user unpublished:', remoteUser.uid);
+        if (mediaType === "video") {
+          remoteUser.videoTrack?.stop();
+          setRemoteConnected(false);
+        }
+      });
+
+      client.on("user-left", (remoteUser) => {
+        console.log('Agora: Remote user left:', remoteUser.uid);
+        setRemoteConnected(false);
+      });
 
       // Fetch token
       const response = await fetch(`/api/agora-token?channelName=${channelName}&uid=${uid}`);
@@ -135,45 +172,24 @@ export function VideoConsultationContainer({
         throw new Error(data.error || "Failed to retrieve valid Agora RTC token");
       }
 
+      // Join channel
       await client.join(data.appId || appId, channelName, data.token, uid);
+      console.log('Agora: Successfully joined channel:', channelName);
 
-      // Local tracks
+      // Create local tracks
       const [audioTrack, videoTrack] = await Promise.all([
         AgoraRTC.createMicrophoneAudioTrack(),
         AgoraRTC.createCameraVideoTrack(),
       ]);
       audioTrackRef.current = audioTrack;
       videoTrackRef.current = videoTrack;
-      await client.publish([audioTrack, videoTrack]);
 
-      // Play local video in the 25% PIP container (string ID)
+      // Play local self-view
       videoTrack.play(LOCAL_VIDEO_ID);
 
-      // ── Subscribe to remote participant tracks ──────────────────────────
-      client.on("user-published", async (remoteUser, mediaType) => {
-        await client.subscribe(remoteUser, mediaType);
-        if (mediaType === "video") {
-          // Wait for DOM element to exist before playing
-          setTimeout(() => {
-            remoteUser.videoTrack?.play(REMOTE_VIDEO_ID);
-          }, 100);
-          setRemoteConnected(true);
-        }
-        if (mediaType === "audio") {
-          remoteUser.audioTrack?.play();
-        }
-      });
-
-      client.on("user-unpublished", (remoteUser, mediaType) => {
-        if (mediaType === "video") {
-          remoteUser.videoTrack?.stop();
-          setRemoteConnected(false);
-        }
-      });
-
-      client.on("user-left", () => {
-        setRemoteConnected(false);
-      });
+      // Publish local tracks to channel
+      await client.publish([audioTrack, videoTrack]);
+      console.log('Agora: Published local tracks');
 
       setIsConnecting(false);
       setIsConnected(true);

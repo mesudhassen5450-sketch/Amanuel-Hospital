@@ -36,6 +36,7 @@ export function VideoConsultationContainer({
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [hasJoinedCall, setHasJoinedCall] = useState(false);
 
   // Derive paid status from appointment data
   const appointmentIsPaid = appointment?.payment_status === 'paid' || appointment?.is_paid === true;
@@ -118,6 +119,9 @@ export function VideoConsultationContainer({
       alert("Payment required to join video consultation.");
       return;
     }
+
+    // Set joined call state before initializing
+    setHasJoinedCall(true);
 
     const appId = import.meta.env.VITE_AGORA_APP_ID || "db0b41794c224e549c92102892b75081";
 
@@ -247,7 +251,7 @@ export function VideoConsultationContainer({
       </div>
 
       {/* Video Screen */}
-      <Card className="flex-1 border border-border bg-slate-900 rounded-2xl overflow-hidden relative">
+      <Card className="flex-1 border border-border bg-slate-900 rounded-2xl overflow-hidden relative h-[600px] lg:h-[calc(100vh-140px)]">
         <CardContent className="p-0 h-full">
           
           {/* Payment Gate Overlay - Show ONLY when unpaid */}
@@ -259,8 +263,46 @@ export function VideoConsultationContainer({
             />
           )}
 
-          {/* Full-Screen Video Layout with PIP Self-View - Show ONLY when paid */}
-          {effectiveIsPaid && (
+          {/* Pre-Call Screen - Show green button before joining */}
+          {effectiveIsPaid && !hasJoinedCall && (
+            <div className="h-full flex flex-col items-center justify-center bg-slate-950 p-6">
+              <div className="text-center space-y-6 max-w-md">
+                <div className="w-24 h-24 rounded-full bg-emerald-600/20 border-2 border-emerald-500/40 flex items-center justify-center mx-auto">
+                  <Video className="w-12 h-12 text-emerald-400"/>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-2">
+                    {isDoctor ? "Start Doctor Call" : "Join Video Call"}
+                  </h3>
+                  <p className="text-slate-400 text-sm">
+                    {isDoctor 
+                      ? "You're about to start a video consultation with the patient. Click below to begin."
+                      : "You're about to join a video consultation with your doctor. Click below to begin."}
+                  </p>
+                </div>
+                <Button
+                  onClick={handleConnect}
+                  disabled={isConnecting}
+                  className="w-full h-14 text-lg font-semibold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg gap-2"
+                >
+                  {isConnecting ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Video className="h-5 w-5" />
+                      {isDoctor ? "Start Doctor Call" : "Join Video Call"}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Full-Screen Video Layout with PIP Self-View - Show ONLY when joined */}
+          {effectiveIsPaid && hasJoinedCall && (
             <div className="h-full p-2">
               
               {/* Remote Video Container - Full Screen */}
@@ -299,8 +341,8 @@ export function VideoConsultationContainer({
             </div>
           )}
 
-          {/* Control Bar - Show ONLY when paid */}
-          {effectiveIsPaid && (
+          {/* Control Bar - Show ONLY when joined */}
+          {effectiveIsPaid && hasJoinedCall && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/60 backdrop-blur-sm rounded-full px-6 py-3">
               
               {/* Mute Button */}
@@ -323,27 +365,15 @@ export function VideoConsultationContainer({
               {isCameraOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
             </Button>
 
-            {/* Connect/End Call Button */}
-            {!isConnected ? (
-              <Button
-                variant="default"
-                size="icon"
-                className="rounded-full h-10 w-10 bg-emerald-600 hover:bg-emerald-700"
-                onClick={handleConnect}
-                disabled={!isPaid || isConnecting}
-              >
-                {isConnecting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Video className="h-5 w-5" />}
-              </Button>
-            ) : (
-              <Button
-                variant="destructive"
-                size="icon"
-                className="rounded-full h-10 w-10"
-                onClick={handleEndCall}
-              >
-                <PhoneOff className="h-5 w-5" />
-              </Button>
-            )}
+            {/* End Call Button */}
+            <Button
+              variant="destructive"
+              size="icon"
+              className="rounded-full h-10 w-10"
+              onClick={handleEndCall}
+            >
+              <PhoneOff className="h-5 w-5" />
+            </Button>
 
           </div>
           )}

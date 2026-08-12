@@ -245,8 +245,8 @@
 }
 
 /* Video consultation styling - prevent cropping/zooming */
-#remote-video-container video,
-#local-video-container video {
+[id^="remote-video-"] video,
+[id^="local-video-"] video {
   object-fit: contain !important; /* Prevents cropping/zooming - shows full wide view */
   width: 100% !important;
   height: 100% !important;

@@ -255,52 +255,43 @@ export function VideoConsultationContainer({
             />
           )}
 
-          {/* Video Grid — 75% dominant remote / 25% local PIP */}
-          <div className="flex flex-col h-full gap-2 p-2">
-
-            {/* Remote participant — 75% — Doctor sees patient, Patient sees doctor */}
-            <div
+          {/* Full-Screen Video Layout with PIP Self-View */}
+          <div className="h-full p-2">
+            
+            {/* Remote Video Container - Full Screen */}
+            <div 
               id={REMOTE_VIDEO_ID}
-              className="relative bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center"
-              style={{ flex: "3" }}
+              className="relative w-full h-full bg-slate-950 overflow-hidden rounded-xl"
             >
+              {/* Fallback Overlay when Remote User is NOT connected */}
               {!remoteConnected && (
-                <div className="text-center pointer-events-none">
-                  <Loader2 className="h-8 w-8 text-slate-400 animate-spin mb-2 mx-auto" />
-                  <p className="text-slate-400 text-sm">
-                    {isConnecting ? "Connecting..." : isConnected ? "Waiting for remote participant..." : "Waiting for participant..."}
-                  </p>
-                  {!isPaid && (
-                    <p className="text-slate-500 text-xs mt-1">Payment required to join</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Local participant — 25% — PIP self-preview */}
-            <div
-              id={LOCAL_VIDEO_ID}
-              className="relative bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center"
-              style={{ flex: "1" }}
-            >
-              {isCameraOff && (
-                <div className="text-center pointer-events-none">
-                  <VideoOff className="h-8 w-8 text-slate-500 mx-auto mb-1" />
-                  <p className="text-slate-400 text-xs">Camera Off</p>
-                </div>
-              )}
-              {!isConnected && !isCameraOff && (
-                <div className="text-center pointer-events-none">
-                  <div className="w-12 h-12 bg-slate-600 rounded-full mx-auto mb-1 flex items-center justify-center">
-                    <span className="text-base font-bold text-white">
-                      {isDoctor ? "Dr" : "Me"}
-                    </span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-white z-10">
+                  <div className="animate-pulse flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
+                      <Video className="w-8 h-8 text-blue-400"/>
+                    </div>
+                    <p className="text-lg font-medium text-slate-300">Waiting for participant to join...</p>
+                    {!isPaid && (
+                      <p className="text-slate-500 text-sm mt-1">Payment required to join</p>
+                    )}
                   </div>
-                  <p className="text-white text-xs font-medium">
-                    {isDoctor ? "You (Doctor)" : "You (Patient)"}
-                  </p>
                 </div>
               )}
+
+              {/* SELF-VIEW (SMALL PICTURE-IN-PICTURE THUMBNAIL) */}
+              <div 
+                id={LOCAL_VIDEO_ID}
+                className="absolute bottom-4 right-4 w-48 h-36 bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 transition-all hover:scale-105"
+              >
+                <span className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[10px] text-white/80 z-30 font-medium backdrop-blur-sm">
+                  You
+                </span>
+                {isCameraOff && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 z-10">
+                    <VideoOff className="h-8 w-8 text-slate-500" />
+                  </div>
+                )}
+              </div>
             </div>
 
           </div>

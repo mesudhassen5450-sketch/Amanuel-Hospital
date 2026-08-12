@@ -243,3 +243,12 @@
     font-family: var(--font-display);
   }
 }
+
+/* Video consultation styling - prevent cropping/zooming */
+#remote-video-container video,
+#local-video-container video {
+  object-fit: contain !important; /* Prevents cropping/zooming - shows full wide view */
+  width: 100% !important;
+  height: 100% !important;
+  background-color: #0f172a; /* Slate 900 letterbox background */
+}

@@ -183,6 +183,11 @@ export function useDoctorNotifications(doctorId: string) {
   useEffect(() => {
     const activeDoctorId = doctorId || "doctor";
 
+    // Console warning if doctorId is missing
+    if (!doctorId) {
+      console.warn('useDoctorNotifications: doctorId is missing or undefined. Using fallback "doctor"');
+    }
+
     // Supabase Realtime subscription for incoming consultation requests
     const channel = supabase
       .channel(`doctor-appointments-${activeDoctorId}`)

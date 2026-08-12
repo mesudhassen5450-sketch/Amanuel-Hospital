@@ -153,8 +153,10 @@ export function VideoConsultationContainer({
       client.on("user-published", async (remoteUser, mediaType) => {
         await client.subscribe(remoteUser, mediaType);
         if (mediaType === "video") {
-          // Play remote stream in the 75% dominant container (string ID)
-          remoteUser.videoTrack?.play(REMOTE_VIDEO_ID);
+          // Wait for DOM element to exist before playing
+          setTimeout(() => {
+            remoteUser.videoTrack?.play(REMOTE_VIDEO_ID);
+          }, 100);
           setRemoteConnected(true);
         }
         if (mediaType === "audio") {

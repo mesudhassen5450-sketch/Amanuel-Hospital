@@ -42,34 +42,42 @@ function VideoConsultationPage() {
       setLoadingAppt(true);
       try {
         // Parse appointment ID from room string (e.g. "apt_53" → "53") or use directly
-        const numericId = String(appointmentId).replace(/^apt_/i, "");
+        const cleanId = String(appointmentId).replace(/^apt_/i, "");
+
+        console.log('Fetching appointment with ID:', cleanId);
 
         const { data, error } = await supabase
           .from("appointments")
           .select("*, patient:patients(*)")
-          .eq("id", numericId)
+          .eq("id", cleanId)
           .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase Appointment Fetch Error:', error);
+          throw error;
+        }
+
+        console.log('Supabase Appointment Data:', data);
 
         if (data) {
           const patient = data.patient;
           const age = calcAge(patient?.date_of_birth);
+
+          // Flexible field mapping for patient data
+          const patientName = data.patient_name || data.full_name || patient?.full_name || patient?.name || "Guest Patient";
+          const phoneNumber = data.phone_number || data.phone || patient?.phone_number || patient?.phone || "";
+          const reason = data.reason_for_visit || data.symptoms || data.reason || data.complaint || data.chief_complaint || "Online Video Consultation";
+          const patientAge = age || data.age || null;
+          const patientGender = patient?.gender || data.gender || null;
+
           setAppointment({
             id:              String(data.id),
-            // Patient info — live from DB
-            patient_name:    data.full_name
-                              ?? patient?.full_name
-                              ?? "Guest Patient",
-            phone:           data.phone ?? patient?.phone ?? "",
-            patient_age:     age ?? null,
-            patient_gender:  patient?.gender ?? data.gender ?? null,
-            primary_complaints:
-                             data.reason_for_visit
-                              ?? data.symptoms
-                              ?? data.reason
-                              ?? data.chief_complaint
-                              ?? "Online Video Consultation",
+            // Patient info — live from DB with flexible mapping
+            patient_name:    patientName,
+            phone:           phoneNumber,
+            patient_age:     patientAge,
+            patient_gender:  patientGender,
+            primary_complaints: reason,
             // Payment / status
             payment_status:  data.payment_status,
             status:          data.status ?? "SCHEDULED",

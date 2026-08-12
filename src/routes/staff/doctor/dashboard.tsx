@@ -37,18 +37,20 @@ function DoctorDashboardPage() {
 
   // Supabase Realtime subscription for general appointments
   useEffect(() => {
-    // Wait until auth session hydration completes or user activeDoctorId is resolved
-    if (!hydrated && !user) return;
+    if (!user?.username) {
+      console.warn('Doctor Dashboard: user.username is missing or undefined. Cannot setup realtime subscription.');
+      return;
+    }
 
     const channel = supabase
-      .channel(`doctor-dashboard-${activeDoctorId}`)
+      .channel(`doctor-dashboard-${user.username}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'appointments',
-          filter: `doctor_id=eq.${activeDoctorId}`,
+          filter: `doctor_id=eq.${user.username}`,
         },
         (payload) => {
           const newAppointment = payload.new as any;
@@ -73,7 +75,7 @@ function DoctorDashboardPage() {
           event: 'UPDATE',
           schema: 'public',
           table: 'appointments',
-          filter: `doctor_id=eq.${activeDoctorId}`,
+          filter: `doctor_id=eq.${user.username}`,
         },
         (payload) => {
           // Refresh stats when appointments are updated

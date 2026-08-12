@@ -182,7 +182,7 @@ function VideoConsultationPage() {
       <div className="flex flex-col lg:flex-row min-h-screen">
 
         {/* Left — Video area (80%) */}
-        <div className="flex-1 lg:w-[80%] p-4 lg:p-5 bg-slate-50 dark:bg-slate-900/50 min-h-[60vh] lg:min-h-screen">
+        <div className="flex-1 lg:w-[80%] p-3 sm:p-4 lg:p-5 bg-slate-50 dark:bg-slate-900/50 min-h-[60vh] lg:min-h-screen">
           <VideoConsultationContainer
             appointmentId={String(appointment.id)}
             appointment={appointment}
@@ -194,7 +194,7 @@ function VideoConsultationPage() {
         </div>
 
         {/* Right — Sidebar (20%) */}
-        <div className="lg:w-[20%] min-w-[240px] p-4 lg:p-4 bg-card border-l border-border overflow-y-auto">
+        <div className="lg:w-[20%] min-w-[240px] p-3 sm:p-4 lg:p-4 bg-card border-l border-border overflow-y-auto">
           <ClinicalWorkflow appointment={appointment} isDoctor={isDoctor} />
         </div>
 

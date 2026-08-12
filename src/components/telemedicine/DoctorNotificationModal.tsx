@@ -99,13 +99,13 @@ export function DoctorNotificationModal({ open, onOpenChange, request }: DoctorN
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-display font-bold flex items-center gap-2">
+          <DialogTitle className="text-lg sm:text-xl font-display font-bold flex items-center gap-2">
             <Video className="h-5 w-5 text-primary" />
             Incoming Consultation Request
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             A patient is requesting an instant video consultation
           </DialogDescription>
         </DialogHeader>
@@ -118,15 +118,15 @@ export function DoctorNotificationModal({ open, onOpenChange, request }: DoctorN
                   <div className="bg-primary/10 p-2 rounded-full">
                     <Phone className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{request.patientName}</p>
-                    <p className="text-xs text-muted-foreground">{request.phoneNumber}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{request.patientName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{request.phoneNumber}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4" />
-                  <span>Requested {new Date(request.createdAt).toLocaleTimeString()}</span>
+                  <span className="text-xs sm:text-sm">Requested {new Date(request.createdAt).toLocaleTimeString()}</span>
                 </div>
 
                 <div className="pt-2 border-t border-border">
@@ -138,12 +138,12 @@ export function DoctorNotificationModal({ open, onOpenChange, request }: DoctorN
             </CardContent>
           </Card>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={handleDecline}
               disabled={status !== "idle"}
-              className="flex-1 gap-2"
+              className="flex-1 gap-2 h-12 sm:h-10"
             >
               {status === "declining" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -155,7 +155,7 @@ export function DoctorNotificationModal({ open, onOpenChange, request }: DoctorN
             <Button
               onClick={handleAccept}
               disabled={status !== "idle"}
-              className="flex-1 gap-2"
+              className="flex-1 gap-2 h-12 sm:h-10"
             >
               {status === "accepting" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -166,7 +166,7 @@ export function DoctorNotificationModal({ open, onOpenChange, request }: DoctorN
             </Button>
           </div>
 
-          <p className="text-xs text-center text-muted-foreground">
+          <p className="text-[11px] sm:text-xs text-center text-muted-foreground">
             Accepting will mark you as available and redirect to the video consultation room
           </p>
         </CardContent>

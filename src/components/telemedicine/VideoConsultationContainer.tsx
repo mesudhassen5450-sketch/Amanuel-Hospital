@@ -251,7 +251,7 @@ export function VideoConsultationContainer({
       </div>
 
       {/* Video Screen */}
-      <Card className="flex-1 border border-border bg-slate-900 rounded-2xl overflow-hidden relative h-[600px] lg:h-[calc(100vh-140px)]">
+      <Card className="flex-1 border border-border bg-slate-900 rounded-2xl overflow-hidden relative h-[75vh] min-h-[480px] lg:h-[calc(100vh-140px)]">
         <CardContent className="p-0 h-full">
           
           {/* Payment Gate Overlay - Show ONLY when unpaid */}
@@ -325,7 +325,7 @@ export function VideoConsultationContainer({
                 {/* SELF-VIEW (SMALL PICTURE-IN-PICTURE THUMBNAIL) */}
                 <div 
                   id={LOCAL_VIDEO_ID}
-                  className="absolute bottom-4 right-4 w-48 h-36 bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 transition-all hover:scale-105"
+                  className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-28 h-24 sm:w-48 sm:h-36 bg-slate-900 rounded-lg sm:rounded-xl overflow-hidden shadow-2xl border sm:border-2 border-white/20 z-20 transition-all hover:scale-105"
                 >
                   <span className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[10px] text-white/80 z-30 font-medium backdrop-blur-sm">
                     You
@@ -343,13 +343,13 @@ export function VideoConsultationContainer({
 
           {/* Control Bar - Show ONLY when joined */}
           {effectiveIsPaid && hasJoinedCall && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/60 backdrop-blur-sm rounded-full px-6 py-3">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 sm:gap-4 bg-slate-900/80 backdrop-blur-md px-4 py-2 sm:px-6 sm:py-3 rounded-full border border-white/10 z-30">
               
               {/* Mute Button */}
               <Button
                 variant={isMuted ? "destructive" : "secondary"}
                 size="icon"
-                className="rounded-full h-10 w-10"
+                className="rounded-full h-10 w-10 sm:h-10 sm:w-10"
                 onClick={handleToggleMute}
               >
                 {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -359,7 +359,7 @@ export function VideoConsultationContainer({
               <Button
                 variant={isCameraOff ? "destructive" : "secondary"}
                 size="icon"
-                className="rounded-full h-10 w-10"
+                className="rounded-full h-10 w-10 sm:h-10 sm:w-10"
                 onClick={handleToggleCamera}
               >
               {isCameraOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
@@ -369,7 +369,7 @@ export function VideoConsultationContainer({
             <Button
               variant="destructive"
               size="icon"
-              className="rounded-full h-10 w-10"
+              className="rounded-full h-10 w-10 sm:h-10 sm:w-10"
               onClick={handleEndCall}
             >
               <PhoneOff className="h-5 w-5" />

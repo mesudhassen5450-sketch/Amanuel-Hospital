@@ -134,41 +134,41 @@ export function ClinicalWorkflow({ appointment, isDoctor = false }: ClinicalWork
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3">
               Patient Summary
             </p>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="col-span-1 sm:col-span-2">
                 <Label className="text-xs text-muted-foreground">Name</Label>
-                <p className="font-medium text-foreground">{appointment.patient_name || "Guest Patient"}</p>
+                <p className="font-medium text-foreground text-sm sm:text-base">{appointment.patient_name || "Guest Patient"}</p>
                 {appointment.phone && (
                   <p className="text-xs text-muted-foreground">{appointment.phone}</p>
                 )}
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Age</Label>
-                <p className="font-medium text-foreground">
+                <p className="font-medium text-foreground text-sm sm:text-base">
                   {appointment.patient_age != null ? `${appointment.patient_age} years` : "Not specified"}
                 </p>
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Gender</Label>
-                <p className="font-medium text-foreground">
+                <p className="font-medium text-foreground text-sm sm:text-base">
                   {appointment.patient_gender || "Not specified"}
                 </p>
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <Label className="text-xs text-muted-foreground">Primary Complaint</Label>
-                <p className="font-medium text-foreground">
+                <p className="font-medium text-foreground text-sm sm:text-base">
                   {appointment.primary_complaints || "Online Video Consultation"}
                 </p>
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Doctor</Label>
-                <p className="font-medium text-foreground text-xs">
+                <p className="font-medium text-foreground text-xs sm:text-sm">
                   {appointment.doctor_name || "Dr. Amanuel Tesfaye"}
                 </p>
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Fee</Label>
-                <p className="font-medium text-foreground">
+                <p className="font-medium text-foreground text-sm sm:text-base">
                   {appointment.consultation_fee != null ? `${appointment.consultation_fee} ETB` : "100 ETB"}
                 </p>
               </div>
@@ -178,7 +178,7 @@ export function ClinicalWorkflow({ appointment, isDoctor = false }: ClinicalWork
 
             <div>
               <Label className="text-xs text-muted-foreground mb-2 block">Vitals Summary</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
                   <Thermometer className="h-4 w-4 text-amber-600" />
                   <div>
@@ -302,8 +302,8 @@ export function ClinicalWorkflow({ appointment, isDoctor = false }: ClinicalWork
               
               {/* Add Prescription Form */}
               <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <Label className="text-xs">Medication Name</Label>
                     <Input
                       placeholder="e.g., Amoxicillin"
@@ -330,7 +330,7 @@ export function ClinicalWorkflow({ appointment, isDoctor = false }: ClinicalWork
                       className="text-sm h-8"
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <Label className="text-xs">Duration</Label>
                     <Input
                       placeholder="e.g., 7 days"
@@ -343,7 +343,7 @@ export function ClinicalWorkflow({ appointment, isDoctor = false }: ClinicalWork
                 <Button
                   size="sm"
                   onClick={addPrescription}
-                  className="w-full h-8 text-xs gap-1"
+                  className="w-full h-10 sm:h-8 text-xs sm:text-xs gap-1"
                   disabled={!newPrescription.medication || !newPrescription.dosage}
                 >
                   <Plus className="h-3 w-3" />

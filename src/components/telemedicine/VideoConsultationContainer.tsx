@@ -37,8 +37,11 @@ export function VideoConsultationContainer({
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  // Derive paid status from appointment data
+  const appointmentIsPaid = appointment?.payment_status === 'paid' || appointment?.is_paid === true;
+  
   // Check if current user is doctor or staff to bypass payment gate completely
-  const effectiveIsPaid = isPaid || isDoctor;
+  const effectiveIsPaid = appointmentIsPaid || isDoctor;
   
   // Agora refs
   const clientRef = useRef<any>(null);
@@ -110,6 +113,7 @@ export function VideoConsultationContainer({
   };
 
   const handleConnect = async () => {
+    // Strict payment check - do not allow connection if unpaid (unless doctor)
     if (!effectiveIsPaid) {
       alert("Payment required to join video consultation.");
       return;
@@ -246,7 +250,7 @@ export function VideoConsultationContainer({
       <Card className="flex-1 border border-border bg-slate-900 rounded-2xl overflow-hidden relative">
         <CardContent className="p-0 h-full">
           
-          {/* Payment Gate Overlay */}
+          {/* Payment Gate Overlay - Show ONLY when unpaid */}
           {!effectiveIsPaid && (
             <PaymentGate 
               onPayment={onPayment} 
@@ -255,69 +259,67 @@ export function VideoConsultationContainer({
             />
           )}
 
-          {/* Full-Screen Video Layout with PIP Self-View */}
-          <div className="h-full p-2">
-            
-            {/* Remote Video Container - Full Screen */}
-            <div 
-              id={REMOTE_VIDEO_ID}
-              className="relative w-full h-full bg-slate-950 overflow-hidden rounded-xl"
-            >
-              {/* Fallback Overlay when Remote User is NOT connected */}
-              {!remoteConnected && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-white z-10">
-                  <div className="animate-pulse flex flex-col items-center gap-3">
-                    <div className="w-16 h-16 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
-                      <Video className="w-8 h-8 text-blue-400"/>
-                    </div>
-                    <p className="text-lg font-medium text-slate-300">Waiting for participant to join...</p>
-                    {!isPaid && (
-                      <p className="text-slate-500 text-sm mt-1">Payment required to join</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* SELF-VIEW (SMALL PICTURE-IN-PICTURE THUMBNAIL) */}
+          {/* Full-Screen Video Layout with PIP Self-View - Show ONLY when paid */}
+          {effectiveIsPaid && (
+            <div className="h-full p-2">
+              
+              {/* Remote Video Container - Full Screen */}
               <div 
-                id={LOCAL_VIDEO_ID}
-                className="absolute bottom-4 right-4 w-48 h-36 bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 transition-all hover:scale-105"
+                id={REMOTE_VIDEO_ID}
+                className="relative w-full h-full bg-slate-950 overflow-hidden rounded-xl"
               >
-                <span className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[10px] text-white/80 z-30 font-medium backdrop-blur-sm">
-                  You
-                </span>
-                {isCameraOff && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 z-10">
-                    <VideoOff className="h-8 w-8 text-slate-500" />
+                {/* Fallback Overlay when Remote User is NOT connected */}
+                {!remoteConnected && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-white z-10">
+                    <div className="animate-pulse flex flex-col items-center gap-3">
+                      <div className="w-16 h-16 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
+                        <Video className="w-8 h-8 text-blue-400"/>
+                      </div>
+                      <p className="text-lg font-medium text-slate-300">Waiting for participant to join...</p>
+                    </div>
                   </div>
                 )}
+
+                {/* SELF-VIEW (SMALL PICTURE-IN-PICTURE THUMBNAIL) */}
+                <div 
+                  id={LOCAL_VIDEO_ID}
+                  className="absolute bottom-4 right-4 w-48 h-36 bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 transition-all hover:scale-105"
+                >
+                  <span className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[10px] text-white/80 z-30 font-medium backdrop-blur-sm">
+                    You
+                  </span>
+                  {isCameraOff && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 z-10">
+                      <VideoOff className="h-8 w-8 text-slate-500" />
+                    </div>
+                  )}
+                </div>
               </div>
+
             </div>
+          )}
 
-          </div>
+          {/* Control Bar - Show ONLY when paid */}
+          {effectiveIsPaid && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/60 backdrop-blur-sm rounded-full px-6 py-3">
+              
+              {/* Mute Button */}
+              <Button
+                variant={isMuted ? "destructive" : "secondary"}
+                size="icon"
+                className="rounded-full h-10 w-10"
+                onClick={handleToggleMute}
+              >
+                {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </Button>
 
-          {/* Control Bar */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/60 backdrop-blur-sm rounded-full px-6 py-3">
-            
-            {/* Mute Button */}
-            <Button
-              variant={isMuted ? "destructive" : "secondary"}
-              size="icon"
-              className="rounded-full h-10 w-10"
-              onClick={handleToggleMute}
-              disabled={!isPaid}
-            >
-              {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            </Button>
-
-            {/* Camera Button */}
-            <Button
-              variant={isCameraOff ? "destructive" : "secondary"}
-              size="icon"
-              className="rounded-full h-10 w-10"
-              onClick={handleToggleCamera}
-              disabled={!isPaid}
-            >
+              {/* Camera Button */}
+              <Button
+                variant={isCameraOff ? "destructive" : "secondary"}
+                size="icon"
+                className="rounded-full h-10 w-10"
+                onClick={handleToggleCamera}
+              >
               {isCameraOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
             </Button>
 
@@ -344,6 +346,7 @@ export function VideoConsultationContainer({
             )}
 
           </div>
+          )}
 
         </CardContent>
       </Card>

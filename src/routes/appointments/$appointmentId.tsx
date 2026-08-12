@@ -195,7 +195,7 @@ function VideoConsultationPage() {
 
         {/* Right — Sidebar (20%) */}
         <div className="lg:w-[20%] min-w-[240px] p-4 lg:p-4 bg-card border-l border-border overflow-y-auto">
-          <ClinicalWorkflow appointment={appointment} />
+          <ClinicalWorkflow appointment={appointment} isDoctor={isDoctor} />
         </div>
 
       </div>

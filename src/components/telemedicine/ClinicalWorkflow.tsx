@@ -37,10 +37,25 @@ interface ClinicalWorkflowProps {
       heart_rate?: string | null;
       weight?: string | null;
     } | null;
+    soap_notes?: {
+      subjective?: string | null;
+      objective?: string | null;
+      assessment?: string | null;
+      plan?: string | null;
+    } | null;
+    prescriptions?: Array<{
+      id: string;
+      medication: string;
+      dosage: string;
+      frequency: string;
+      duration: string;
+    }> | null;
+    status?: string | null;
   };
+  isDoctor?: boolean;
 }
 
-export function ClinicalWorkflow({ appointment }: ClinicalWorkflowProps) {
+export function ClinicalWorkflow({ appointment, isDoctor = false }: ClinicalWorkflowProps) {
   const [expandedSection, setExpandedSection] = useState<string>("patient");
   
   // Clinical Notes State
@@ -198,183 +213,278 @@ export function ClinicalWorkflow({ appointment }: ClinicalWorkflowProps) {
         )}
       </Card>
 
-      {/* Clinical Notes Section */}
-      <Card className="border border-border bg-card shadow-sm">
-        <CardHeader 
-          className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-          onClick={() => toggleSection("notes")}
-        >
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              Clinical Notes (SOAP)
-            </CardTitle>
-            {expandedSection === "notes" ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {expandedSection === "notes" && (
-          <CardContent className="pt-0 space-y-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold">Subjective (S)</Label>
-              <Textarea
-                placeholder="Patient's reported symptoms..."
-                value={clinicalNotes.subjective}
-                onChange={(e) => setClinicalNotes({ ...clinicalNotes, subjective: e.target.value })}
-                className="min-h-[60px] text-sm resize-none"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold">Objective (O)</Label>
-              <Textarea
-                placeholder="Physical examination findings..."
-                value={clinicalNotes.objective}
-                onChange={(e) => setClinicalNotes({ ...clinicalNotes, objective: e.target.value })}
-                className="min-h-[60px] text-sm resize-none"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold">Assessment (A)</Label>
-              <Textarea
-                placeholder="Diagnosis and clinical impression..."
-                value={clinicalNotes.assessment}
-                onChange={(e) => setClinicalNotes({ ...clinicalNotes, assessment: e.target.value })}
-                className="min-h-[60px] text-sm resize-none"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold">Plan (P)</Label>
-              <Textarea
-                placeholder="Treatment plan and follow-up..."
-                value={clinicalNotes.plan}
-                onChange={(e) => setClinicalNotes({ ...clinicalNotes, plan: e.target.value })}
-                className="min-h-[60px] text-sm resize-none"
-              />
-            </div>
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Prescription Builder Section */}
-      <Card className="border border-border bg-card shadow-sm">
-        <CardHeader 
-          className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-          onClick={() => toggleSection("prescription")}
-        >
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Pill className="h-4 w-4 text-primary" />
-              Prescription Builder
-              {prescriptions.length > 0 && (
-                <Badge variant="secondary" className="ml-2 text-xs">{prescriptions.length}</Badge>
+      {/* Clinical Notes Section - DOCTOR ONLY */}
+      {isDoctor && (
+        <Card className="border border-border bg-card shadow-sm">
+          <CardHeader 
+            className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+            onClick={() => toggleSection("notes")}
+          >
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                Clinical Notes (SOAP)
+              </CardTitle>
+              {expandedSection === "notes" ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
-            </CardTitle>
-            {expandedSection === "prescription" ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {expandedSection === "prescription" && (
-          <CardContent className="pt-0 space-y-4">
-            
-            {/* Add Prescription Form */}
-            <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="col-span-2">
-                  <Label className="text-xs">Medication Name</Label>
-                  <Input
-                    placeholder="e.g., Amoxicillin"
-                    value={newPrescription.medication}
-                    onChange={(e) => setNewPrescription({ ...newPrescription, medication: e.target.value })}
-                    className="text-sm h-8"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Dosage</Label>
-                  <Input
-                    placeholder="e.g., 500mg"
-                    value={newPrescription.dosage}
-                    onChange={(e) => setNewPrescription({ ...newPrescription, dosage: e.target.value })}
-                    className="text-sm h-8"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Frequency</Label>
-                  <Input
-                    placeholder="e.g., 3x daily"
-                    value={newPrescription.frequency}
-                    onChange={(e) => setNewPrescription({ ...newPrescription, frequency: e.target.value })}
-                    className="text-sm h-8"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-xs">Duration</Label>
-                  <Input
-                    placeholder="e.g., 7 days"
-                    value={newPrescription.duration}
-                    onChange={(e) => setNewPrescription({ ...newPrescription, duration: e.target.value })}
-                    className="text-sm h-8"
-                  />
-                </div>
-              </div>
-              <Button
-                size="sm"
-                onClick={addPrescription}
-                className="w-full h-8 text-xs gap-1"
-                disabled={!newPrescription.medication || !newPrescription.dosage}
-              >
-                <Plus className="h-3 w-3" />
-                Add Medication
-              </Button>
             </div>
+          </CardHeader>
+          {expandedSection === "notes" && (
+            <CardContent className="pt-0 space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Subjective (S)</Label>
+                <Textarea
+                  placeholder="Patient's reported symptoms..."
+                  value={clinicalNotes.subjective}
+                  onChange={(e) => setClinicalNotes({ ...clinicalNotes, subjective: e.target.value })}
+                  className="min-h-[60px] text-sm resize-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Objective (O)</Label>
+                <Textarea
+                  placeholder="Physical examination findings..."
+                  value={clinicalNotes.objective}
+                  onChange={(e) => setClinicalNotes({ ...clinicalNotes, objective: e.target.value })}
+                  className="min-h-[60px] text-sm resize-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Assessment (A)</Label>
+                <Textarea
+                  placeholder="Diagnosis and clinical impression..."
+                  value={clinicalNotes.assessment}
+                  onChange={(e) => setClinicalNotes({ ...clinicalNotes, assessment: e.target.value })}
+                  className="min-h-[60px] text-sm resize-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Plan (P)</Label>
+                <Textarea
+                  placeholder="Treatment plan and follow-up..."
+                  value={clinicalNotes.plan}
+                  onChange={(e) => setClinicalNotes({ ...clinicalNotes, plan: e.target.value })}
+                  className="min-h-[60px] text-sm resize-none"
+                />
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
-            {/* Prescriptions List */}
-            {prescriptions.length > 0 && (
-              <div className="space-y-2">
-                {prescriptions.map((prescription) => (
-                  <div
-                    key={prescription.id}
-                    className="flex items-start gap-2 bg-card border border-border p-2 rounded-lg"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-foreground truncate">
-                        {prescription.medication}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {prescription.dosage} · {prescription.frequency} · {prescription.duration}
+      {/* Prescription Builder Section - DOCTOR ONLY */}
+      {isDoctor && (
+        <Card className="border border-border bg-card shadow-sm">
+          <CardHeader 
+            className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+            onClick={() => toggleSection("prescription")}
+          >
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Pill className="h-4 w-4 text-primary" />
+                Prescription Builder
+                {prescriptions.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 text-xs">{prescriptions.length}</Badge>
+                )}
+              </CardTitle>
+              {expandedSection === "prescription" ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+          </CardHeader>
+          {expandedSection === "prescription" && (
+            <CardContent className="pt-0 space-y-4">
+              
+              {/* Add Prescription Form */}
+              <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="col-span-2">
+                    <Label className="text-xs">Medication Name</Label>
+                    <Input
+                      placeholder="e.g., Amoxicillin"
+                      value={newPrescription.medication}
+                      onChange={(e) => setNewPrescription({ ...newPrescription, medication: e.target.value })}
+                      className="text-sm h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Dosage</Label>
+                    <Input
+                      placeholder="e.g., 500mg"
+                      value={newPrescription.dosage}
+                      onChange={(e) => setNewPrescription({ ...newPrescription, dosage: e.target.value })}
+                      className="text-sm h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Frequency</Label>
+                    <Input
+                      placeholder="e.g., 3x daily"
+                      value={newPrescription.frequency}
+                      onChange={(e) => setNewPrescription({ ...newPrescription, frequency: e.target.value })}
+                      className="text-sm h-8"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs">Duration</Label>
+                    <Input
+                      placeholder="e.g., 7 days"
+                      value={newPrescription.duration}
+                      onChange={(e) => setNewPrescription({ ...newPrescription, duration: e.target.value })}
+                      className="text-sm h-8"
+                    />
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={addPrescription}
+                  className="w-full h-8 text-xs gap-1"
+                  disabled={!newPrescription.medication || !newPrescription.dosage}
+                >
+                  <Plus className="h-3 w-3" />
+                  Add Medication
+                </Button>
+              </div>
+
+              {/* Prescriptions List */}
+              {prescriptions.length > 0 && (
+                <div className="space-y-2">
+                  {prescriptions.map((prescription) => (
+                    <div
+                      key={prescription.id}
+                      className="flex items-start gap-2 bg-card border border-border p-2 rounded-lg"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">
+                          {prescription.medication}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {prescription.dosage} · {prescription.frequency} · {prescription.duration}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive"
+                        onClick={() => removePrescription(prescription.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            </CardContent>
+          )}
+        </Card>
+      )}
+
+      {/* Submit Action - DOCTOR ONLY */}
+      {isDoctor && (
+        <Button
+          onClick={handleSave}
+          className="w-full h-12 text-sm font-semibold rounded-xl shadow-md gap-2"
+          disabled={!clinicalNotes.subjective && !clinicalNotes.objective && !clinicalNotes.assessment && !clinicalNotes.plan && prescriptions.length === 0}
+        >
+          <Save className="h-4 w-4" />
+          Save Notes & Complete Appointment
+        </Button>
+      )}
+
+      {/* Patient Read-Only View - PATIENT ONLY */}
+      {!isDoctor && (
+        <>
+          {/* Read-Only Prescription Summary */}
+          {(appointment.prescriptions && appointment.prescriptions.length > 0) && (
+            <Card className="border border-border bg-card shadow-sm">
+              <CardHeader 
+                className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                onClick={() => toggleSection("prescription")}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Pill className="h-4 w-4 text-primary" />
+                    Prescription Summary
+                    <Badge variant="secondary" className="ml-2 text-xs">{appointment.prescriptions.length}</Badge>
+                  </CardTitle>
+                  {expandedSection === "prescription" ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+              </CardHeader>
+              {expandedSection === "prescription" && (
+                <CardContent className="pt-0 space-y-2">
+                  {appointment.prescriptions.map((prescription) => (
+                    <div
+                      key={prescription.id}
+                      className="flex items-start gap-2 bg-slate-50 dark:bg-slate-800/50 border border-border p-3 rounded-lg"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">
+                          {prescription.medication}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {prescription.dosage} · {prescription.frequency} · {prescription.duration}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Read-Only Doctor Notes - Show after completion */}
+          {appointment.status === 'COMPLETED' && appointment.soap_notes && (
+            <Card className="border border-border bg-card shadow-sm">
+              <CardHeader 
+                className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                onClick={() => toggleSection("notes")}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    Doctor Notes & Follow-up
+                  </CardTitle>
+                  {expandedSection === "notes" ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+              </CardHeader>
+              {expandedSection === "notes" && (
+                <CardContent className="pt-0 space-y-3">
+                  {appointment.soap_notes.plan && (
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Follow-up Instructions</Label>
+                      <p className="text-sm text-foreground bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
+                        {appointment.soap_notes.plan}
                       </p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-destructive hover:text-destructive"
-                      onClick={() => removePrescription(prescription.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Submit Action */}
-      <Button
-        onClick={handleSave}
-        className="w-full h-12 text-sm font-semibold rounded-xl shadow-md gap-2"
-        disabled={!clinicalNotes.subjective && !clinicalNotes.objective && !clinicalNotes.assessment && !clinicalNotes.plan && prescriptions.length === 0}
-      >
-        <Save className="h-4 w-4" />
-        Save Notes & Complete Appointment
-      </Button>
+                  )}
+                  {appointment.soap_notes.assessment && (
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Assessment</Label>
+                      <p className="text-sm text-foreground bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
+                        {appointment.soap_notes.assessment}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          )}
+        </>
+      )}
 
     </div>
   );

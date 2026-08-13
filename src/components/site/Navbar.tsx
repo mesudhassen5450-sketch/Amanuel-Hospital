@@ -18,7 +18,7 @@ import { VideoCallBadge } from "@/components/telemedicine/VideoCallBadge";
 const langOptions: { code: Lang; label: string; flag: string }[] = [
   { code: "en", label: "English",      flag: "🇬🇧" },
   { code: "am", label: "አማርኛ",         flag: "🇪🇹" },
-  { code: "or", label: "Afaan Oromoo", flag: "🔴⚪🔴" },
+  { code: "or", label: "Afaan Oromoo", flag: "/images/oromia-flag.svg" },
 ];
 
 interface NavbarProps {
@@ -105,7 +105,11 @@ export function Navbar({ onOpenChat }: NavbarProps) {
               {langOptions.map((l) => (
                 <DropdownMenuItem key={l.code} onClick={() => setLang(l.code)}>
                   <span className={cn("flex items-center gap-2", l.code === lang && "font-semibold text-primary")}>
-                    <span>{l.flag}</span>
+                    {l.flag.startsWith('/') ? (
+                      <img src={l.flag} alt={`${l.label} flag`} className="w-4 h-3 object-cover rounded-sm" />
+                    ) : (
+                      <span>{l.flag}</span>
+                    )}
                     {l.label}
                   </span>
                 </DropdownMenuItem>
@@ -144,7 +148,7 @@ export function Navbar({ onOpenChat }: NavbarProps) {
           {/* Mobile hamburger */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="xl:hidden" aria-label="Open menu">
+              <Button variant="ghost" size="icon" className="xl:hidden text-amber-100 hover:bg-amber-900/20 hover:text-white" aria-label="Open menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -171,13 +175,18 @@ export function Navbar({ onOpenChat }: NavbarProps) {
                       key={l.code}
                       onClick={() => setLang(l.code)}
                       className={cn(
-                        "flex-1 rounded-lg border py-1.5 text-xs font-medium transition-colors",
+                        "flex-1 rounded-lg border py-1.5 text-xs font-medium transition-colors flex items-center justify-center gap-1",
                         l.code === lang
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border text-muted-foreground hover:bg-secondary"
                       )}
                     >
-                      {l.flag} {l.code.toUpperCase()}
+                      {l.flag.startsWith('/') ? (
+                        <img src={l.flag} alt={`${l.label} flag`} className="w-3 h-2 object-cover rounded-sm" />
+                      ) : (
+                        <span className="text-xs">{l.flag}</span>
+                      )}
+                      {l.code.toUpperCase()}
                     </button>
                   ))}
                 </div>
@@ -197,7 +206,7 @@ export function Navbar({ onOpenChat }: NavbarProps) {
 
                 {/* Online Video Consultation — mobile */}
                 <Link
-                  to="/booking"
+                  to="/booking?type=video"
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-2 px-3 py-2 rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-sm font-medium hover:bg-emerald-600 hover:text-white transition-all mt-2"
                 >

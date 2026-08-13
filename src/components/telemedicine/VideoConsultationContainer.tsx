@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,9 @@ export function VideoConsultationContainer({
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [hasJoinedCall, setHasJoinedCall] = useState(false);
+
+  // Navigation for role-based routing after call ends
+  const navigate = useNavigate();
 
   // Derive paid status from appointment data
   const appointmentIsPaid = appointment?.payment_status === 'paid' || appointment?.is_paid === true;
@@ -78,7 +82,7 @@ export function VideoConsultationContainer({
 
   const handleEndCall = async () => {
     try {
-      // Unpublish and close local tracks
+      // 1. Unpublish and close local tracks
       if (audioTrackRef.current) {
         await audioTrackRef.current.close();
         audioTrackRef.current = null;
@@ -88,12 +92,13 @@ export function VideoConsultationContainer({
         videoTrackRef.current = null;
       }
 
+      // 2. Leave Agora channel
       if (clientRef.current) {
         await clientRef.current.leave();
         setIsConnected(false);
       }
       
-      // Update Supabase with proper call end status
+      // 3. Update Supabase with proper call end status
       const sb = createClient(
         import.meta.env.VITE_SUPABASE_URL,
         import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -108,8 +113,23 @@ export function VideoConsultationContainer({
           updated_at: new Date().toISOString(),
         })
         .eq("id", appointmentId);
+
+      // 4. Role-based navigation redirect
+      if (isDoctor) {
+        // Doctor returns to clinical dashboard
+        navigate({ to: '/staff/doctor/dashboard' });
+      } else {
+        // Patient returns to home page
+        navigate({ to: '/' });
+      }
     } catch (error) {
       console.error("Error ending call:", error);
+      // Even if there's an error, still redirect the user
+      if (isDoctor) {
+        navigate({ to: '/staff/doctor/dashboard' });
+      } else {
+        navigate({ to: '/' });
+      }
     }
   };
 
@@ -145,11 +165,17 @@ export function VideoConsultationContainer({
         await client.subscribe(remoteUser, mediaType);
         
         if (mediaType === "video") {
-          // Wait brief moment for remote container DOM element
+          // Attach remote stream to both desktop and mobile containers
           setTimeout(() => {
-            const container = document.getElementById(REMOTE_VIDEO_ID);
-            if (container) {
+            // Desktop container
+            const desktopContainer = document.getElementById(REMOTE_VIDEO_ID);
+            if (desktopContainer) {
               remoteUser.videoTrack?.play(REMOTE_VIDEO_ID);
+            }
+            // Mobile container
+            const mobileContainer = document.getElementById(`${REMOTE_VIDEO_ID}-mobile`);
+            if (mobileContainer) {
+              remoteUser.videoTrack?.play(`${REMOTE_VIDEO_ID}-mobile`);
             }
           }, 100);
           setRemoteConnected(true);
@@ -192,8 +218,14 @@ export function VideoConsultationContainer({
       audioTrackRef.current = audioTrack;
       videoTrackRef.current = videoTrack;
 
-      // Play local self-view
+      // Play local self-view in both desktop and mobile containers
       videoTrack.play(LOCAL_VIDEO_ID);
+      setTimeout(() => {
+        const mobileLocal = document.getElementById(`${LOCAL_VIDEO_ID}-mobile`);
+        if (mobileLocal) {
+          videoTrack.play(`${LOCAL_VIDEO_ID}-mobile`);
+        }
+      }, 100);
 
       // Publish local tracks to channel
       await client.publish([audioTrack, videoTrack]);
@@ -303,47 +335,88 @@ export function VideoConsultationContainer({
 
           {/* Full-Screen Video Layout with PIP Self-View - Show ONLY when joined */}
           {effectiveIsPaid && hasJoinedCall && (
-            <div className="h-full p-2">
-              
-              {/* Remote Video Container - Full Screen */}
-              <div 
-                id={REMOTE_VIDEO_ID}
-                className="relative w-full h-full bg-slate-950 overflow-hidden rounded-xl"
-              >
-                {/* Fallback Overlay when Remote User is NOT connected */}
-                {!remoteConnected && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-white z-10">
-                    <div className="animate-pulse flex flex-col items-center gap-3">
-                      <div className="w-16 h-16 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
-                        <Video className="w-8 h-8 text-blue-400"/>
-                      </div>
-                      <p className="text-lg font-medium text-slate-300">Waiting for participant to join...</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* SELF-VIEW (SMALL PICTURE-IN-PICTURE THUMBNAIL) */}
+            <>
+              {/* DESKTOP Layout (≥1024px) - Keep existing desktop styles untouched */}
+              <div className="hidden lg:block h-full p-2">
+                
+                {/* Remote Video Container - Full Screen */}
                 <div 
-                  id={LOCAL_VIDEO_ID}
-                  className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-28 h-24 sm:w-48 sm:h-36 bg-slate-900 rounded-lg sm:rounded-xl overflow-hidden shadow-2xl border sm:border-2 border-white/20 z-20 transition-all hover:scale-105"
+                  id={REMOTE_VIDEO_ID}
+                  className="relative w-full h-full bg-slate-950 overflow-hidden rounded-xl"
                 >
-                  <span className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[10px] text-white/80 z-30 font-medium backdrop-blur-sm">
+                  {/* Fallback Overlay when Remote User is NOT connected */}
+                  {!remoteConnected && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-white z-10">
+                      <div className="animate-pulse flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
+                          <Video className="w-8 h-8 text-blue-400"/>
+                        </div>
+                        <p className="text-lg font-medium text-slate-300">Waiting for participant to join...</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* DESKTOP SELF-VIEW (SMALL PICTURE-IN-PICTURE THUMBNAIL) */}
+                  <div 
+                    id={LOCAL_VIDEO_ID}
+                    className="absolute bottom-4 right-4 w-48 h-36 bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 transition-all hover:scale-105"
+                  >
+                    <span className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[10px] text-white/80 z-30 font-medium backdrop-blur-sm">
+                      You
+                    </span>
+                    {isCameraOff && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 z-10">
+                        <VideoOff className="h-8 w-8 text-slate-500" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* MOBILE Layout (≤767px) - IMO/WhatsApp Style Full Screen */}
+              <div className="lg:hidden fixed inset-0 bg-black z-40">
+                
+                {/* MOBILE Remote Video - Full viewport background */}
+                <div 
+                  id={`${REMOTE_VIDEO_ID}-mobile`}
+                  className="absolute inset-0 w-full h-full bg-slate-950 overflow-hidden"
+                >
+                  {/* Mobile Remote Stream will attach here */}
+                  {!remoteConnected && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-white z-10">
+                      <div className="animate-pulse flex flex-col items-center gap-4">
+                        <div className="w-20 h-20 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
+                          <Video className="w-10 h-10 text-blue-400"/>
+                        </div>
+                        <p className="text-xl font-medium text-slate-300">Waiting for participant...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* MOBILE Self-View (PIP in top-right corner) */}
+                <div 
+                  id={`${LOCAL_VIDEO_ID}-mobile`}
+                  className="absolute top-4 right-4 w-[100px] h-[140px] bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white z-30"
+                >
+                  <span className="absolute top-1 left-1 px-1 py-0.5 bg-black/70 rounded text-[8px] text-white/90 z-40 font-medium backdrop-blur-sm">
                     You
                   </span>
                   {isCameraOff && (
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 z-10">
-                      <VideoOff className="h-8 w-8 text-slate-500" />
+                      <VideoOff className="h-6 w-6 text-slate-400" />
                     </div>
                   )}
                 </div>
-              </div>
 
-            </div>
+              </div>
+            </>
           )}
 
           {/* Control Bar - Show ONLY when joined */}
           {effectiveIsPaid && hasJoinedCall && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 sm:gap-4 bg-slate-900/80 backdrop-blur-md px-4 py-2 sm:px-6 sm:py-3 rounded-full border border-white/10 z-30">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 lg:bottom-4 lg:left-1/2 lg:-translate-x-1/2 flex items-center gap-3 sm:gap-4 bg-slate-900/80 backdrop-blur-md px-4 py-2 sm:px-6 sm:py-3 rounded-full border border-white/10 z-50">
               
               {/* Mute Button */}
               <Button

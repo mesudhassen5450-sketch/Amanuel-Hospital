@@ -25,16 +25,16 @@ export function Footer() {
   ] as const;
 
   return (
-    <footer className="border-t border-border bg-card">
+    <footer className="border-t border-amber-900/40 bg-[#1F110A]">
       <div className="mx-auto max-w-7xl px-4 py-14 lg:px-8">
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2">
               <img src={logoImg} alt="Dr. Amanuel Hospital logo" className="h-9 w-9 rounded-xl object-cover" />
-              <span className="font-display text-lg font-bold">Dr. Amanuel Hospital</span>
+              <span className="font-display text-lg font-bold text-amber-50">Dr. Amanuel Hospital</span>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">{t(tr.tagline, lang)}</p>
+            <p className="mt-4 text-sm text-amber-100/80">{t(tr.tagline, lang)}</p>
             <div className="mt-4 flex gap-2">
               <a
                 href="https://web.facebook.com/Amanuelhtufa"
@@ -42,7 +42,7 @@ export function Footer() {
                 rel="noopener noreferrer"
                 aria-label="Follow us on Facebook"
               >
-                <Button variant="secondary" size="icon" className="rounded-xl">
+                <Button variant="secondary" size="icon" className="rounded-xl bg-amber-900/30 hover:bg-amber-800 text-amber-200 border-amber-700/50">
                   <Facebook className="h-4 w-4" />
                 </Button>
               </a>
@@ -52,7 +52,7 @@ export function Footer() {
                 rel="noopener noreferrer"
                 aria-label="Join our Telegram channel"
               >
-                <Button variant="secondary" size="icon" className="rounded-xl">
+                <Button variant="secondary" size="icon" className="rounded-xl bg-amber-900/30 hover:bg-amber-800 text-amber-200 border-amber-700/50">
                   <Send className="h-4 w-4" />
                 </Button>
               </a>
@@ -60,7 +60,7 @@ export function Footer() {
                 href={`mailto:${contactInfo.email}`}
                 aria-label="Send us an email"
               >
-                <Button variant="secondary" size="icon" className="rounded-xl">
+                <Button variant="secondary" size="icon" className="rounded-xl bg-amber-900/30 hover:bg-amber-800 text-amber-200 border-amber-700/50">
                   <Mail className="h-4 w-4" />
                 </Button>
               </a>
@@ -70,7 +70,7 @@ export function Footer() {
                 rel="noopener noreferrer"
                 aria-label="Find us on Google Maps"
               >
-                <Button variant="secondary" size="icon" className="rounded-xl">
+                <Button variant="secondary" size="icon" className="rounded-xl bg-amber-900/30 hover:bg-amber-800 text-amber-200 border-amber-700/50">
                   <MapPin className="h-4 w-4" />
                 </Button>
               </a>
@@ -79,13 +79,13 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-foreground">
+            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-amber-50">
               {t(tr.quickLinks, lang)}
             </h3>
             <ul className="mt-4 space-y-2 text-sm">
               {quickLinks.map(({ to, label }) => (
                 <li key={to}>
-                  <Link to={to} className="text-muted-foreground transition-colors hover:text-primary">
+                  <Link to={to} className="text-amber-100/80 transition-colors hover:text-amber-400">
                     {label}
                   </Link>
                 </li>
@@ -95,13 +95,13 @@ export function Footer() {
 
           {/* Services */}
           <div>
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-foreground">
+            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-amber-50">
               {t(tr.servicesLabel, lang)}
             </h3>
             <ul className="mt-4 space-y-2 text-sm">
               {services.slice(0, 6).map((s) => (
                 <li key={s.id}>
-                  <Link to="/services" className="text-muted-foreground transition-colors hover:text-primary">
+                  <Link to="/services" className="text-amber-100/80 transition-colors hover:text-amber-400">
                     {s.title}
                   </Link>
                 </li>
@@ -111,15 +111,15 @@ export function Footer() {
 
           {/* Emergency & Newsletter */}
           <div>
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-foreground">
+            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-amber-50">
               {t(tr.emergency, lang)}
             </h3>
-            <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary">
+            <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-amber-300">
               <Phone className="h-4 w-4" aria-hidden="true" /> {contactInfo.emergency}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">{t(tr.emergencyHotline, lang)}</p>
+            <p className="mt-1 text-xs text-amber-100/70">{t(tr.emergencyHotline, lang)}</p>
             {subscribed ? (
-              <p className="mt-5 rounded-xl bg-secondary p-3 text-sm text-secondary-foreground">
+              <p className="mt-5 rounded-xl bg-amber-900/50 p-3 text-sm text-amber-100">
                 {t(tr.subscribed, lang)}
               </p>
             ) : (
@@ -129,13 +129,13 @@ export function Footer() {
                 <Input id="newsletter-email" type="email" required
                   placeholder={t(tr.emailPh, lang)} value={email}
                   onChange={(e) => setEmail(e.target.value)} className="rounded-xl" />
-                <Button type="submit" className="rounded-xl">{t(tr.join, lang)}</Button>
+                <Button type="submit" className="rounded-xl bg-amber-600 hover:bg-amber-700">{t(tr.join, lang)}</Button>
               </form>
             )}
           </div>
         </div>
 
-        <div className="mt-12 border-t border-border pt-6 text-center text-xs text-muted-foreground">
+        <div className="mt-12 border-t border-amber-900/40 pt-6 text-center text-xs text-amber-100/70">
           <p>© {new Date().getFullYear()} {t(tr.copyright, lang)}</p>
         </div>
       </div>

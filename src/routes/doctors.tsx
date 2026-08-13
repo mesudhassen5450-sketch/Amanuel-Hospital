@@ -85,17 +85,17 @@ function DoctorsPage() {
                     </Badge>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">{doc.experience}</p>
-                  <div className="mt-5 flex gap-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
                     <Button
                       variant="outline"
-                      className="flex-1 rounded-xl gap-2"
+                      className="w-full sm:w-1/2 py-2.5 px-3 text-xs sm:text-sm font-medium border border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-center gap-2"
                       onClick={() => setVideoModalOpen(true)}
                       disabled={!doc.isOnline}
                     >
                       <Video className="h-4 w-4" />
                       Check Availability
                     </Button>
-                    <Button asChild className="flex-1 rounded-xl">
+                    <Button asChild className="w-full sm:w-1/2 py-2.5 px-3 text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md transition-all text-center">
                       <Link to="/booking">
                         {t(tr.bookAppt, lang)}
                       </Link>

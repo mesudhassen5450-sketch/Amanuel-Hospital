@@ -64,14 +64,14 @@ export function Navbar({ onOpenChat }: NavbarProps) {
     <header
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-        scrolled ? "bg-[#2A1810] shadow-lg border-b border-amber-900/40" : "bg-[#3D2314]/90 backdrop-blur-sm",
+        scrolled ? "bg-white shadow-lg border-b border-border" : "bg-white/95 backdrop-blur-sm",
       )}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 lg:px-8">
         {/* Logo */}
-        <Link to="/" className="flex min-w-0 items-center gap-2" aria-label="Dr. Amanuel Hospital home">
+        <Link to="/" className="flex items-center gap-2 flex-shrink-0 min-w-fit" aria-label="Dr. Amanuel Hospital home">
           <img src={logoImg} alt="Dr. Amanuel Hospital logo" className="h-9 w-9 shrink-0 rounded-xl object-cover" />
-          <span className="truncate font-display text-base font-bold leading-tight text-amber-50 sm:text-lg">
+          <span className="font-display text-base font-bold leading-tight text-foreground sm:text-lg whitespace-nowrap">
             Dr. Amanuel Hospital
           </span>
         </Link>
@@ -83,9 +83,9 @@ export function Navbar({ onOpenChat }: NavbarProps) {
               key={link.to}
               to={link.to}
               activeOptions={{ exact: link.to === "/" }}
-              activeProps={{ className: "text-amber-300 font-semibold bg-amber-900/30 rounded-lg" }}
-              inactiveProps={{ className: "text-amber-100/90 hover:text-white" }}
-              className="rounded-lg px-3 py-2 text-sm transition-colors hover:bg-amber-900/20"
+              activeProps={{ className: "text-primary font-semibold bg-primary/10 rounded-lg" }}
+              inactiveProps={{ className: "text-foreground/80 hover:text-foreground" }}
+              className="rounded-lg px-3 py-2 text-sm transition-colors hover:bg-secondary"
             >
               {link.label}
             </Link>
@@ -97,7 +97,7 @@ export function Navbar({ onOpenChat }: NavbarProps) {
           {/* Language switcher */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={`Language: ${currentLangLabel}`} className="text-amber-100 hover:bg-amber-900/20 hover:text-white">
+              <Button variant="ghost" size="icon" aria-label={`Language: ${currentLangLabel}`} className="text-foreground hover:bg-secondary hover:text-foreground">
                 <Globe className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -120,13 +120,13 @@ export function Navbar({ onOpenChat }: NavbarProps) {
           {/* Dark / light */}
           <Button variant="ghost" size="icon" onClick={toggleTheme}
             aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-            className="text-amber-100 hover:bg-amber-900/20 hover:text-white">
+            className="text-foreground hover:bg-secondary hover:text-foreground">
             {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
 
           {/* AI Assistant — desktop */}
           <Button variant="outline" size="sm" onClick={onOpenChat} aria-label="Open AI assistant"
-            className="hidden items-center gap-1.5 rounded-xl border-amber-500/50 text-amber-200 hover:bg-amber-900/30 hover:border-amber-400 md:inline-flex">
+            className="hidden items-center gap-1.5 rounded-xl border-primary/30 text-primary hover:bg-primary/10 hover:border-primary md:inline-flex">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
@@ -139,7 +139,7 @@ export function Navbar({ onOpenChat }: NavbarProps) {
           <VideoCallBadge />
 
           {/* Book appointment — desktop */}
-          <Button asChild className="hidden rounded-xl bg-amber-600 hover:bg-amber-700 text-white md:inline-flex">
+          <Button asChild className="hidden rounded-xl md:inline-flex">
             <Link to="/booking">
               {t(tr.nav.bookAppt, lang)}
             </Link>
@@ -148,7 +148,7 @@ export function Navbar({ onOpenChat }: NavbarProps) {
           {/* Mobile hamburger */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="xl:hidden text-amber-100 hover:bg-amber-900/20 hover:text-white" aria-label="Open menu">
+              <Button variant="ghost" size="icon" className="xl:hidden text-foreground hover:bg-secondary hover:text-foreground" aria-label="Open menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -206,12 +206,13 @@ export function Navbar({ onOpenChat }: NavbarProps) {
 
                 {/* Online Video Consultation — mobile */}
                 <Link
-                  to="/booking?type=video"
+                  to="/booking"
+                  search={{ type: 'video', mode: 'online' }}
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-2 px-3 py-2 rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-sm font-medium hover:bg-emerald-600 hover:text-white transition-all mt-2"
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Online Consultation</span>
+                  <span>Video Consultation</span>
                   <Video className="h-4 w-4 ml-auto" />
                 </Link>
 

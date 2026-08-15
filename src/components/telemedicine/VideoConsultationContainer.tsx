@@ -165,20 +165,14 @@ export function VideoConsultationContainer({
         await client.subscribe(remoteUser, mediaType);
         
         if (mediaType === "video") {
-          // Attach remote stream to both desktop and mobile containers
+          // Attach remote stream to single unified container
+          setRemoteConnected(true);
           setTimeout(() => {
-            // Desktop container
-            const desktopContainer = document.getElementById(REMOTE_VIDEO_ID);
-            if (desktopContainer) {
+            const remoteContainer = document.getElementById(REMOTE_VIDEO_ID);
+            if (remoteContainer) {
               remoteUser.videoTrack?.play(REMOTE_VIDEO_ID);
             }
-            // Mobile container
-            const mobileContainer = document.getElementById(`${REMOTE_VIDEO_ID}-mobile`);
-            if (mobileContainer) {
-              remoteUser.videoTrack?.play(`${REMOTE_VIDEO_ID}-mobile`);
-            }
           }, 100);
-          setRemoteConnected(true);
         }
         
         if (mediaType === "audio") {
@@ -218,14 +212,8 @@ export function VideoConsultationContainer({
       audioTrackRef.current = audioTrack;
       videoTrackRef.current = videoTrack;
 
-      // Play local self-view in both desktop and mobile containers
+      // Play local self-view in unified container
       videoTrack.play(LOCAL_VIDEO_ID);
-      setTimeout(() => {
-        const mobileLocal = document.getElementById(`${LOCAL_VIDEO_ID}-mobile`);
-        if (mobileLocal) {
-          videoTrack.play(`${LOCAL_VIDEO_ID}-mobile`);
-        }
-      }, 100);
 
       // Publish local tracks to channel
       await client.publish([audioTrack, videoTrack]);
@@ -266,17 +254,17 @@ export function VideoConsultationContainer({
     <div className="flex flex-col h-full gap-4">
       
       {/* Top Bar */}
-      <div className="flex items-center justify-between bg-card border border-border rounded-xl p-4 shadow-sm">
+      <div className="flex items-center justify-between bg-card border border-border rounded-xl p-4">
         <div className="flex  items-center gap-3">
-          <h2 className="text-sm font-semibold text-foreground font-display">
+          <h2 className="text-sm font-semibold text-foreground font-display mono-technical">
             Room: apt_{appointmentId}
           </h2>
-          <Badge className={cn("text-xs font-medium", STATUS_COLORS[appointment.status] || "bg-muted")}>
+          <Badge className={cn("text-xs font-medium mono-technical", STATUS_COLORS[appointment.status] || "bg-muted")}>
             {appointment.status}
           </Badge>
         </div>
         {!effectiveIsPaid && (
-          <Badge variant="destructive" className="text-xs font-medium">
+          <Badge variant="destructive" className="text-xs font-medium mono-technical">
             Unpaid (100 ETB Required)
           </Badge>
         )}
@@ -315,7 +303,7 @@ export function VideoConsultationContainer({
                 <Button
                   onClick={handleConnect}
                   disabled={isConnecting}
-                  className="w-full h-14 text-lg font-semibold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg gap-2"
+                  className="w-full h-14 text-lg font-semibold bg-emerald-600 hover:bg-emerald-700 rounded-xl gap-2 precise-button"
                 >
                   {isConnecting ? (
                     <>
@@ -335,94 +323,53 @@ export function VideoConsultationContainer({
 
           {/* Full-Screen Video Layout with PIP Self-View - Show ONLY when joined */}
           {effectiveIsPaid && hasJoinedCall && (
-            <>
-              {/* DESKTOP Layout (≥1024px) - Keep existing desktop styles untouched */}
-              <div className="hidden lg:block h-full p-2">
-                
-                {/* Remote Video Container - Full Screen */}
-                <div 
-                  id={REMOTE_VIDEO_ID}
-                  className="relative w-full h-full bg-slate-950 overflow-hidden rounded-xl"
-                >
-                  {/* Fallback Overlay when Remote User is NOT connected */}
-                  {!remoteConnected && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-white z-10">
-                      <div className="animate-pulse flex flex-col items-center gap-3">
-                        <div className="w-16 h-16 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
-                          <Video className="w-8 h-8 text-blue-400"/>
-                        </div>
-                        <p className="text-lg font-medium text-slate-300">Waiting for participant to join...</p>
+            <div className="fixed inset-0 lg:relative lg:h-full lg:p-2 bg-black lg:bg-transparent z-40 lg:z-auto">
+              
+              {/* Unified Remote Video Container - Responsive for both desktop and mobile */}
+              <div 
+                id={REMOTE_VIDEO_ID}
+                className="relative w-full h-full bg-slate-950 overflow-hidden lg:rounded-xl flex items-center justify-center"
+              >
+                {/* Fallback Overlay when Remote User is NOT connected */}
+                {!remoteConnected && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-white z-10">
+                    <div className="animate-pulse flex flex-col items-center gap-3 lg:gap-4">
+                      <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
+                        <Video className="w-8 h-8 lg:w-10 lg:h-10 text-blue-400"/>
                       </div>
+                      <p className="text-lg lg:text-xl font-medium text-slate-300">Waiting for participant to join...</p>
                     </div>
-                  )}
-
-                  {/* DESKTOP SELF-VIEW (SMALL PICTURE-IN-PICTURE THUMBNAIL) */}
-                  <div 
-                    id={LOCAL_VIDEO_ID}
-                    className="absolute bottom-4 right-4 w-48 h-36 bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 transition-all hover:scale-105"
-                  >
-                    <span className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[10px] text-white/80 z-30 font-medium backdrop-blur-sm">
-                      You
-                    </span>
-                    {isCameraOff && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 z-10">
-                        <VideoOff className="h-8 w-8 text-slate-500" />
-                      </div>
-                    )}
                   </div>
-                </div>
+                )}
 
-              </div>
-
-              {/* MOBILE Layout (≤767px) - IMO/WhatsApp Style Full Screen */}
-              <div className="lg:hidden fixed inset-0 bg-black z-40">
-                
-                {/* MOBILE Remote Video - Full viewport background */}
+                {/* Unified Self-View (PIP) - Responsive positioning */}
                 <div 
-                  id={`${REMOTE_VIDEO_ID}-mobile`}
-                  className="absolute inset-0 w-full h-full bg-slate-950 overflow-hidden"
+                  id={LOCAL_VIDEO_ID}
+                  className="absolute top-4 right-4 w-[100px] h-[140px] lg:bottom-4 lg:top-auto lg:w-48 lg:h-36 bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 transition-all lg:hover:scale-105"
                 >
-                  {/* Mobile Remote Stream will attach here */}
-                  {!remoteConnected && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-white z-10">
-                      <div className="animate-pulse flex flex-col items-center gap-4">
-                        <div className="w-20 h-20 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
-                          <Video className="w-10 h-10 text-blue-400"/>
-                        </div>
-                        <p className="text-xl font-medium text-slate-300">Waiting for participant...</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* MOBILE Self-View (PIP in top-right corner) */}
-                <div 
-                  id={`${LOCAL_VIDEO_ID}-mobile`}
-                  className="absolute top-4 right-4 w-[100px] h-[140px] bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white z-30"
-                >
-                  <span className="absolute top-1 left-1 px-1 py-0.5 bg-black/70 rounded text-[8px] text-white/90 z-40 font-medium backdrop-blur-sm">
+                  <span className="absolute top-1 left-1 lg:top-2 lg:left-2 px-1 lg:px-2 py-0.5 bg-black/60 lg:bg-black/70 rounded text-[8px] lg:text-[10px] text-white/80 lg:text-white/90 z-30 font-medium backdrop-blur-sm">
                     You
                   </span>
                   {isCameraOff && (
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 z-10">
-                      <VideoOff className="h-6 w-6 text-slate-400" />
+                      <VideoOff className="h-6 w-6 lg:h-8 lg:w-8 text-slate-400 lg:text-slate-500" />
                     </div>
                   )}
                 </div>
-
               </div>
-            </>
+
+            </div>
           )}
 
           {/* Control Bar - Show ONLY when joined */}
           {effectiveIsPaid && hasJoinedCall && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 lg:bottom-4 lg:left-1/2 lg:-translate-x-1/2 flex items-center gap-3 sm:gap-4 bg-slate-900/80 backdrop-blur-md px-4 py-2 sm:px-6 sm:py-3 rounded-full border border-white/10 z-50">
-              
+
               {/* Mute Button */}
               <Button
                 variant={isMuted ? "destructive" : "secondary"}
                 size="icon"
-                className="rounded-full h-10 w-10 sm:h-10 sm:w-10"
+                className="rounded-full h-10 w-10 sm:h-10 sm:w-10 precise-button"
                 onClick={handleToggleMute}
               >
                 {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -432,7 +379,7 @@ export function VideoConsultationContainer({
               <Button
                 variant={isCameraOff ? "destructive" : "secondary"}
                 size="icon"
-                className="rounded-full h-10 w-10 sm:h-10 sm:w-10"
+                className="rounded-full h-10 w-10 sm:h-10 sm:w-10 precise-button"
                 onClick={handleToggleCamera}
               >
               {isCameraOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
@@ -442,7 +389,7 @@ export function VideoConsultationContainer({
             <Button
               variant="destructive"
               size="icon"
-              className="rounded-full h-10 w-10 sm:h-10 sm:w-10"
+              className="rounded-full h-10 w-10 sm:h-10 sm:w-10 precise-button"
               onClick={handleEndCall}
             >
               <PhoneOff className="h-5 w-5" />

@@ -164,31 +164,34 @@
 }
 
 /* Replace AI glass effects with sharp borders */
-@utility sharp-card {
+.sharp-card {
   background: var(--card);
   border: 1px solid var(--border);
 }
 
-@utility technical-focus {
+.technical-focus {
   transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
-  &:hover {
-    border-color: var(--ring);
-  }
-  &:active {
-    transform: scale(0.98);
-  }
+}
+
+.technical-focus:hover {
+  border-color: var(--ring);
+}
+
+.technical-focus:active {
+  transform: scale(0.98);
 }
 
 /* Remove soft hover-lift, add precise interaction */
-@utility precise-button {
+.precise-button {
   transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
-  &:active {
-    transform: scale(0.98);
-  }
+}
+
+.precise-button:active {
+  transform: scale(0.98);
 }
 
 /* Technical monospace styling */
-@utility mono-technical {
+.mono-technical {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   font-variant-numeric: tabular-nums;
 }

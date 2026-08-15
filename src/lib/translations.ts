@@ -194,8 +194,9 @@ export const translations = {
 } as const;
 
 /** Picks the right string for the active language */
-export function t(entry: { en: string; am: string; or: string }, lang: Lang): string {
-  return entry[lang] ?? entry.en;
+export function t(entry: { en: string; am: string; or: string } | undefined, lang: Lang): string {
+  if (!entry) return "";
+  return entry[lang] ?? entry.en ?? "";
 }
 
 // Re-export translated FAQs, testimonials, and stats labels for use in index.tsx

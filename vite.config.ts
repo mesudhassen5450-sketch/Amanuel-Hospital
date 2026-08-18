@@ -14,6 +14,20 @@ export default defineConfig({
   },
   nitro: {
     preset: "netlify",
-    serveStatic: true,
+  },
+  vite: {
+    server: {
+      host: true,
+      port: 8080,
+      strictPort: true,
+      ws: {
+        port: 8080,
+      },
+    },
+    resolve: {
+      tsconfigPaths: true,
+    },
+    // Ensure React Fast Refresh uses relative paths for HMR
+    base: '/',
   },
 });

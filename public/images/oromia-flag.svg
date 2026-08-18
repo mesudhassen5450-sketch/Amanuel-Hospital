@@ -1,9 +1,0 @@
-<svg width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Oromia flag: Red, White, Red horizontal stripes with emblem -->
-  <rect width="24" height="16" rx="2" fill="#E53E3E"/>
-  <rect y="5.33" width="24" height="5.33" fill="#FFFFFF"/>
-  <rect y="10.67" width="24" height="5.33" fill="#E53E3E"/>
-  <!-- Central emblem/symbol -->
-  <circle cx="12" cy="8" r="2" fill="#C05621" stroke="#FFFFFF" stroke-width="0.5"/>
-  <path d="M12 6.5L12.5 7.5H13.5L12.75 8.25L13 9.5L12 8.75L11 9.5L11.25 8.25L10.5 7.5H11.5L12 6.5Z" fill="#FFFFFF"/>
-</svg>

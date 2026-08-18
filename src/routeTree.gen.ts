@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VideoConsultationRouteImport } from './routes/video-consultation'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as PaymentSummaryRouteImport } from './routes/payment-summary'
@@ -43,9 +44,15 @@ import { Route as StaffLaboratoryDashboardRouteImport } from './routes/staff/lab
 import { Route as StaffDoctorQueueRouteImport } from './routes/staff/doctor/queue'
 import { Route as StaffDoctorLabResultsRouteImport } from './routes/staff/doctor/lab-results'
 import { Route as StaffDoctorDashboardRouteImport } from './routes/staff/doctor/dashboard'
+import { Route as ConsultationRoomIdRouteImport } from './routes/consultation.room.$id'
 import { Route as StaffLaboratoryPatientMrnRouteImport } from './routes/staff/laboratory/patient/$mrn'
 import { Route as StaffDoctorPatientMrnRouteImport } from './routes/staff/doctor/patient/$mrn'
 
+const VideoConsultationRoute = VideoConsultationRouteImport.update({
+  id: '/video-consultation',
+  path: '/video-consultation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -220,6 +227,11 @@ const StaffDoctorDashboardRoute = StaffDoctorDashboardRouteImport.update({
   path: '/staff/doctor/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConsultationRoomIdRoute = ConsultationRoomIdRouteImport.update({
+  id: '/consultation/room/$id',
+  path: '/consultation/room/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaffLaboratoryPatientMrnRoute =
   StaffLaboratoryPatientMrnRouteImport.update({
     id: '/staff/laboratory/patient/$mrn',
@@ -245,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/video-consultation': typeof VideoConsultationRoute
   '/api/agora-token': typeof ApiAgoraTokenRoute
   '/api/send-push': typeof ApiSendPushRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
@@ -253,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/payments': typeof StaffPaymentsRoute
+  '/consultation/room/$id': typeof ConsultationRoomIdRoute
   '/staff/doctor/dashboard': typeof StaffDoctorDashboardRoute
   '/staff/doctor/lab-results': typeof StaffDoctorLabResultsRoute
   '/staff/doctor/queue': typeof StaffDoctorQueueRoute
@@ -283,6 +297,7 @@ export interface FileRoutesByTo {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/video-consultation': typeof VideoConsultationRoute
   '/api/agora-token': typeof ApiAgoraTokenRoute
   '/api/send-push': typeof ApiSendPushRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
@@ -291,6 +306,7 @@ export interface FileRoutesByTo {
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/payments': typeof StaffPaymentsRoute
+  '/consultation/room/$id': typeof ConsultationRoomIdRoute
   '/staff/doctor/dashboard': typeof StaffDoctorDashboardRoute
   '/staff/doctor/lab-results': typeof StaffDoctorLabResultsRoute
   '/staff/doctor/queue': typeof StaffDoctorQueueRoute
@@ -322,6 +338,7 @@ export interface FileRoutesById {
   '/payment-summary': typeof PaymentSummaryRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/video-consultation': typeof VideoConsultationRoute
   '/api/agora-token': typeof ApiAgoraTokenRoute
   '/api/send-push': typeof ApiSendPushRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
@@ -330,6 +347,7 @@ export interface FileRoutesById {
   '/staff/dashboard': typeof StaffDashboardRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/payments': typeof StaffPaymentsRoute
+  '/consultation/room/$id': typeof ConsultationRoomIdRoute
   '/staff/doctor/dashboard': typeof StaffDoctorDashboardRoute
   '/staff/doctor/lab-results': typeof StaffDoctorLabResultsRoute
   '/staff/doctor/queue': typeof StaffDoctorQueueRoute
@@ -362,6 +380,7 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/video-consultation'
     | '/api/agora-token'
     | '/api/send-push'
     | '/appointments/$appointmentId'
@@ -370,6 +389,7 @@ export interface FileRouteTypes {
     | '/staff/dashboard'
     | '/staff/login'
     | '/staff/payments'
+    | '/consultation/room/$id'
     | '/staff/doctor/dashboard'
     | '/staff/doctor/lab-results'
     | '/staff/doctor/queue'
@@ -400,6 +420,7 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/video-consultation'
     | '/api/agora-token'
     | '/api/send-push'
     | '/appointments/$appointmentId'
@@ -408,6 +429,7 @@ export interface FileRouteTypes {
     | '/staff/dashboard'
     | '/staff/login'
     | '/staff/payments'
+    | '/consultation/room/$id'
     | '/staff/doctor/dashboard'
     | '/staff/doctor/lab-results'
     | '/staff/doctor/queue'
@@ -438,6 +460,7 @@ export interface FileRouteTypes {
     | '/payment-summary'
     | '/services'
     | '/sitemap.xml'
+    | '/video-consultation'
     | '/api/agora-token'
     | '/api/send-push'
     | '/appointments/$appointmentId'
@@ -446,6 +469,7 @@ export interface FileRouteTypes {
     | '/staff/dashboard'
     | '/staff/login'
     | '/staff/payments'
+    | '/consultation/room/$id'
     | '/staff/doctor/dashboard'
     | '/staff/doctor/lab-results'
     | '/staff/doctor/queue'
@@ -477,6 +501,7 @@ export interface RootRouteChildren {
   PaymentSummaryRoute: typeof PaymentSummaryRoute
   ServicesRoute: typeof ServicesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  VideoConsultationRoute: typeof VideoConsultationRoute
   ApiAgoraTokenRoute: typeof ApiAgoraTokenRoute
   ApiSendPushRoute: typeof ApiSendPushRoute
   AppointmentsAppointmentIdRoute: typeof AppointmentsAppointmentIdRoute
@@ -485,6 +510,7 @@ export interface RootRouteChildren {
   StaffDashboardRoute: typeof StaffDashboardRoute
   StaffLoginRoute: typeof StaffLoginRoute
   StaffPaymentsRoute: typeof StaffPaymentsRoute
+  ConsultationRoomIdRoute: typeof ConsultationRoomIdRoute
   StaffDoctorDashboardRoute: typeof StaffDoctorDashboardRoute
   StaffDoctorLabResultsRoute: typeof StaffDoctorLabResultsRoute
   StaffDoctorQueueRoute: typeof StaffDoctorQueueRoute
@@ -505,6 +531,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/video-consultation': {
+      id: '/video-consultation'
+      path: '/video-consultation'
+      fullPath: '/video-consultation'
+      preLoaderRoute: typeof VideoConsultationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -743,6 +776,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffDoctorDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/consultation/room/$id': {
+      id: '/consultation/room/$id'
+      path: '/consultation/room/$id'
+      fullPath: '/consultation/room/$id'
+      preLoaderRoute: typeof ConsultationRoomIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff/laboratory/patient/$mrn': {
       id: '/staff/laboratory/patient/$mrn'
       path: '/staff/laboratory/patient/$mrn'
@@ -773,6 +813,7 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentSummaryRoute: PaymentSummaryRoute,
   ServicesRoute: ServicesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  VideoConsultationRoute: VideoConsultationRoute,
   ApiAgoraTokenRoute: ApiAgoraTokenRoute,
   ApiSendPushRoute: ApiSendPushRoute,
   AppointmentsAppointmentIdRoute: AppointmentsAppointmentIdRoute,
@@ -781,6 +822,7 @@ const rootRouteChildren: RootRouteChildren = {
   StaffDashboardRoute: StaffDashboardRoute,
   StaffLoginRoute: StaffLoginRoute,
   StaffPaymentsRoute: StaffPaymentsRoute,
+  ConsultationRoomIdRoute: ConsultationRoomIdRoute,
   StaffDoctorDashboardRoute: StaffDoctorDashboardRoute,
   StaffDoctorLabResultsRoute: StaffDoctorLabResultsRoute,
   StaffDoctorQueueRoute: StaffDoctorQueueRoute,

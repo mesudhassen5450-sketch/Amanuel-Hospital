@@ -59,9 +59,12 @@ import {
   CreditCard,
   Building2,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AddStaffModal } from "@/components/admin/AddStaffModal";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/staff/admin")({
   head: () => ({
@@ -79,7 +82,8 @@ type StaffAccount = {
   role: string;
   display_name: string | null;
   is_active: boolean;
-  last_login: string | null;
+  is_online: boolean;
+  last_seen: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -97,6 +101,8 @@ function AdminDashboardPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [toggleStatusDialogOpen, setToggleStatusDialogOpen] = useState(false);
+  const [addStaffModalOpen, setAddStaffModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Selected staff account
   const [selectedStaff, setSelectedStaff] = useState<StaffAccount | null>(null);
@@ -116,9 +122,15 @@ function AdminDashboardPage() {
 
   // Fetch staff accounts
   const fetchStaffAccounts = async () => {
+    // Only fetch if user is authenticated and has a role
+    if (!user?.role) {
+      console.error("User not authenticated or missing role");
+      return;
+    }
+
     try {
       setLoading(true);
-      const res = await getAllStaffAccounts({ data: { callerRole: user?.role as string | undefined } });
+      const res = await getAllStaffAccounts({ data: { callerRole: user.role } });
       setStaffAccounts(res);
       setErrorState(null);
     } catch (error: any) {
@@ -132,8 +144,34 @@ function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    fetchStaffAccounts();
+    if (user?.role) {
+      fetchStaffAccounts();
+    }
   }, [user]);
+
+  // Supabase Realtime subscription for staff_accounts changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin:staff_presence')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'staff_accounts' },
+        (payload) => {
+          setStaffAccounts((prev) =>
+            prev.map((acc) =>
+              acc.username === payload.new.username
+                ? { ...acc, is_online: payload.new.is_online, last_seen: payload.new.last_seen }
+                : acc
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Stats calculations
   const totalStaff = staffAccounts.length;
@@ -151,7 +189,7 @@ function AdminDashboardPage() {
       staff.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       staff.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       staff.role?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === "all" || staff.role === roleFilter;
+    const matchesRole = roleFilter === "all" || staff.role?.toLowerCase() === roleFilter.toLowerCase();
     return matchesSearch && matchesRole;
   });
 
@@ -261,6 +299,30 @@ function AdminDashboardPage() {
     }
   };
 
+  const handleDelete = (staff: StaffAccount) => {
+    setSelectedStaff(staff);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedStaff) return;
+
+    try {
+      setFormLoading(true);
+      const { deleteStaffAccount } = await import("@/lib/staff-server");
+      await deleteStaffAccount({
+        data: { id: selectedStaff.id, callerRole: user?.role as string | undefined },
+      });
+      toast.success("Staff account deleted successfully");
+      setDeleteDialogOpen(false);
+      fetchStaffAccounts();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to delete staff account");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Never";
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -314,12 +376,13 @@ function AdminDashboardPage() {
                 <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
                 Refresh
               </Button>
-              <Link to="/staff/staff-accounts/create">
-                <Button className="gap-2 rounded-xl shadow-md">
-                  <Plus className="h-4 w-4" />
-                  Add Staff Account
-                </Button>
-              </Link>
+              <Button
+                onClick={() => setAddStaffModalOpen(true)}
+                className="gap-2 rounded-xl shadow-md"
+              >
+                <Plus className="h-4 w-4" />
+                Add Staff Account
+              </Button>
             </div>
           </div>
 
@@ -488,15 +551,16 @@ function AdminDashboardPage() {
                     <TableHead className="font-semibold">Username</TableHead>
                     <TableHead className="font-semibold">Role</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">Online</TableHead>
                     <TableHead className="font-semibold">Created Date</TableHead>
-                    <TableHead className="font-semibold">Last Login</TableHead>
+                    <TableHead className="font-semibold">Last Seen</TableHead>
                     <TableHead className="font-semibold text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12">
+                      <TableCell colSpan={8} className="text-center py-12">
                         <div className="flex items-center justify-center gap-2 text-muted-foreground">
                           <Loader2 className="h-5 w-5 animate-spin text-primary" />
                           <span className="text-sm">Loading staff account data...</span>
@@ -505,7 +569,7 @@ function AdminDashboardPage() {
                     </TableRow>
                   ) : filteredStaff.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                         {searchQuery || roleFilter !== "all"
                           ? "No staff accounts matched your filters."
                           : "No staff accounts found in the database."}
@@ -537,11 +601,33 @@ function AdminDashboardPage() {
                             {staff.is_active ? "Active" : "Inactive"}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={cn(
+                              "border text-xs font-semibold rounded-full px-2.5 py-0.5",
+                              staff.is_online
+                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                : "bg-slate-500/10 text-slate-600 border-slate-500/20"
+                            )}
+                          >
+                            {staff.is_online ? (
+                              <>
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1.5" />
+                                Online
+                              </>
+                            ) : (
+                              <>
+                                <span className="w-2 h-2 rounded-full bg-slate-400 mr-1.5" />
+                                Offline
+                              </>
+                            )}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
                           {formatDate(staff.created_at)}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
-                          {formatDate(staff.last_login)}
+                          {formatDate(staff.last_seen)}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -571,6 +657,15 @@ function AdminDashboardPage() {
                               title="Reset Password"
                             >
                               <Key className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(staff)}
+                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive"
+                              title="Delete Staff Account"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -654,9 +749,9 @@ function AdminDashboardPage() {
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Calendar className="h-3 w-3" /> Last Login
+                      <Calendar className="h-3 w-3" /> Last Seen
                     </Label>
-                    <p className="text-xs font-medium mt-1">{formatDate(selectedStaff.last_login)}</p>
+                    <p className="text-xs font-medium mt-1">{formatDate(selectedStaff.last_seen)}</p>
                   </div>
                 </div>
               </div>
@@ -678,13 +773,17 @@ function AdminDashboardPage() {
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-1.5">
-                <Label htmlFor="edit-username" className="text-xs font-semibold">Username (Immutable)</Label>
+                <Label htmlFor="edit-username" className="text-xs font-semibold">Username</Label>
                 <Input
                   id="edit-username"
                   value={editForm.username}
-                  disabled
-                  className="rounded-xl bg-muted/40 font-mono text-xs cursor-not-allowed"
+                  onChange={(e) => setEditForm({ ...editForm, username: e.target.value.toLowerCase() })}
+                  placeholder="Enter username (lowercase)"
+                  className="rounded-xl font-mono text-sm"
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Username must be at least 3 characters and will be stored in lowercase.
+                </p>
               </div>
 
               <div className="space-y-1.5">
@@ -842,6 +941,47 @@ function AdminDashboardPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent className="rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 font-display">
+                <Trash2 className="h-5 w-5 text-destructive" />
+                Delete Staff Account
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-xs text-muted-foreground mt-2">
+                Are you sure you want to permanently delete the account for{" "}
+                <span className="font-semibold text-foreground">{selectedStaff?.display_name || selectedStaff?.username}</span>?
+                This action cannot be undone and will remove all access for this staff member.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="pt-3">
+              <AlertDialogCancel className="rounded-xl text-xs">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                disabled={formLoading}
+                className="rounded-xl text-xs font-semibold bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {formLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Deleting...
+                  </>
+                ) : (
+                  "Delete Account"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Add Staff Modal */}
+        <AddStaffModal
+          isOpen={addStaffModalOpen}
+          onClose={() => setAddStaffModalOpen(false)}
+          onSuccess={fetchStaffAccounts}
+          callerRole={user?.role}
+        />
       </StaffLayout>
     </StaffGuard>
   );

@@ -18,19 +18,21 @@ function StaffLoginPage() {
   const { login, isAuthenticated, hydrated } = useStaffAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // Wait for hydration before checking auth
   useEffect(() => {
     if (hydrated && isAuthenticated) {
       const storedRaw = sessionStorage.getItem("staff_session");
-      const role = storedRaw ? JSON.parse(storedRaw).role : null;
+      const roleRaw = storedRaw ? JSON.parse(storedRaw).role : null;
+      const role = typeof roleRaw === "string" ? roleRaw.toLowerCase() : null;
       if (role === "admin")           window.location.href = "/staff/admin";
       else if (role === "cashier")    window.location.href = "/staff/payments";
       else if (role === "doctor")     window.location.href = "/staff/doctor/dashboard";
       else if (role === "laboratory") window.location.href = "/staff/laboratory/dashboard";
       else if (role === "pharmacy")   window.location.href = "/staff/pharmacy/dashboard";
+      else if (role === "reception" || role === "staff") window.location.href = "/staff/dashboard";
       else                            window.location.href = "/staff/dashboard";
     }
   }, [hydrated, isAuthenticated]);
@@ -55,7 +57,8 @@ function StaffLoginPage() {
     if (result.success) {
       // Role-based redirect — read from sessionStorage set by login()
       const storedRaw = sessionStorage.getItem("staff_session");
-      const role = storedRaw ? JSON.parse(storedRaw).role : null;
+      const roleRaw = storedRaw ? JSON.parse(storedRaw).role : null;
+      const role = typeof roleRaw === "string" ? roleRaw.toLowerCase() : null;
       if (role === "admin")           { window.location.href = "/staff/admin"; }
       else if (role === "cashier")    { window.location.href = "/staff/payments"; }
       else if (role === "doctor")     { window.location.href = "/staff/doctor/dashboard"; }

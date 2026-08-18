@@ -10,6 +10,9 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { BookingProvider } from "@/lib/booking-context";
 import { StaffAuthProvider } from "@/lib/staff-auth";
+import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/lib/theme-context";
+import { useStaffAuth } from "@/lib/staff-auth";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -107,7 +110,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     scripts: [
       {
-        children: `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`,
+        children: `try{var t=localStorage.getItem("theme_default");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`,
       },
     ],
   }),
@@ -119,11 +122,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors">
         {children}
         <Scripts />
       </body>
@@ -137,11 +140,22 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <StaffAuthProvider>
-        <BookingProvider>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-        </BookingProvider>
+        <ThemeProviderInner>
+          <BookingProvider>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </BookingProvider>
+        </ThemeProviderInner>
       </StaffAuthProvider>
+      <Toaster />
     </QueryClientProvider>
   );
+}
+
+// Inner component to access auth context for role-based theming
+function ThemeProviderInner({ children }: { children: ReactNode }) {
+  const { user } = useStaffAuth();
+  const userRole = user?.role || "default";
+  
+  return <ThemeProvider userRole={userRole}>{children}</ThemeProvider>;
 }

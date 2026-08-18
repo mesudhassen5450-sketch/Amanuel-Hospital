@@ -13,7 +13,6 @@ export function StaffGuard({ children, allowedRoles }: StaffGuardProps) {
 
   // Prevent browser from caching this page so back-button shows login instead
   useEffect(() => {
-    // Instruct the browser not to cache this page
     const meta = document.createElement("meta");
     meta.setAttribute("http-equiv", "Cache-Control");
     meta.setAttribute("content", "no-store, no-cache, must-revalidate");
@@ -36,14 +35,24 @@ export function StaffGuard({ children, allowedRoles }: StaffGuardProps) {
       window.location.replace("/staff/login");
       return;
     }
+
     // Role check — redirect to their own portal/dashboard
-    if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
-      if (user.role === "admin")           window.location.replace("/staff/admin");
-      else if (user.role === "cashier")    window.location.replace("/staff/payments");
-      else if (user.role === "doctor")     window.location.replace("/staff/doctor/dashboard");
-      else if (user.role === "laboratory") window.location.replace("/staff/laboratory/dashboard");
-      else if (user.role === "pharmacy")   window.location.replace("/staff/pharmacy/dashboard");
-      else                                 window.location.replace("/staff/dashboard");
+    const userRole = user?.role ? (user.role as string).toLowerCase() : null;
+    const normalizedAllowed = allowedRoles?.map(r => r.toLowerCase());
+
+    if (normalizedAllowed && userRole && !normalizedAllowed.includes(userRole)) {
+      if (userRole === "admin") window.location.replace("/staff/admin");
+      else if (userRole === "cashier") window.location.replace("/staff/payments");
+      else if (userRole === "doctor") window.location.replace("/staff/doctor/dashboard");
+      else if (userRole === "laboratory") window.location.replace("/staff/laboratory/dashboard");
+      else if (userRole === "pharmacy") window.location.replace("/staff/pharmacy/dashboard");
+      else if (userRole === "reception" || userRole === "staff") {
+        if (window.location.pathname !== "/staff/dashboard") {
+          window.location.replace("/staff/dashboard");
+        }
+      } else {
+        window.location.replace("/staff/login");
+      }
     }
   }, [hydrated, isAuthenticated, user, allowedRoles]);
 
@@ -57,7 +66,9 @@ export function StaffGuard({ children, allowedRoles }: StaffGuardProps) {
   }
 
   if (!isAuthenticated) return null;
-  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) return null;
+  const activeRole = user?.role ? (user.role as string).toLowerCase() : null;
+  const allowedNorm = allowedRoles?.map(r => r.toLowerCase());
+  if (allowedNorm && activeRole && !allowedNorm.includes(activeRole)) return null;
 
   return <>{children}</>;
 }

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import AgoraRTC from "agora-rtc-sdk-ng";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PaymentGate } from "@/components/telemedicine/PaymentGate";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
+import { useWebRTCSocket } from "@/hooks/useWebRTCSocket";
+import { useStaffAuth } from "@/lib/staff-auth";
 
 interface VideoConsultationContainerProps {
   appointmentId: string;
@@ -19,7 +20,8 @@ interface VideoConsultationContainerProps {
     consultation_fee?: number;
   };
   isPaid: boolean;
-  onPayment: () => void;
+  onPayment?: () => void;
+  onPaymentSuccess?: () => void;
   isProcessingPayment?: boolean;
   /** Pass true when the logged-in user is a doctor/staff — controls video layout */
   isDoctor?: boolean;
@@ -30,81 +32,110 @@ export function VideoConsultationContainer({
   appointment,
   isPaid,
   onPayment,
+  onPaymentSuccess,
   isProcessingPayment = false,
   isDoctor = false,
 }: VideoConsultationContainerProps) {
-  const [isMuted, setIsMuted] = useState(false);
-  const [isCameraOff, setIsCameraOff] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
   const [hasJoinedCall, setHasJoinedCall] = useState(false);
 
   // Navigation for role-based routing after call ends
   const navigate = useNavigate();
+  const { user: staffUser, hydrated } = useStaffAuth();
 
   // Derive paid status from appointment data
-  const appointmentIsPaid = appointment?.payment_status === 'paid' || appointment?.is_paid === true;
+  const appointmentIsPaid = appointment?.payment_status === 'paid' || (appointment as any)?.is_paid === true;
   
   // Check if current user is doctor or staff to bypass payment gate completely
   const effectiveIsPaid = appointmentIsPaid || isDoctor;
+
+  // Video refs for WebRTC
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+
+  const userRole = staffUser?.username ? 'doctor' : 'patient';
   
-  // Agora refs
-  const clientRef = useRef<any>(null);
-  const audioTrackRef = useRef<any>(null);
-  const videoTrackRef = useRef<any>(null);
-  const [remoteConnected, setRemoteConnected] = useState(false);
+  useEffect(() => {
+    console.log('[VideoConsultationContainer] Role determination:', { 
+      hasStaffUser: !!staffUser, 
+      username: staffUser?.username, 
+      determinedRole: userRole 
+    });
+  }, [appointmentId, userRole, staffUser]);
+  const userId = staffUser?.username || `patient_${appointmentId}`;
 
-  // Stable DOM IDs for Agora to attach video tracks
-  const LOCAL_VIDEO_ID  = `local-video-${appointmentId}`;
-  const REMOTE_VIDEO_ID = `remote-video-${appointmentId}`;
+  // WebRTC hook for peer-to-peer video connection
+  // ALWAYS call hook at top level, use enabled flag to control initialization
+  const {
+    localStream,
+    remoteStream,
+    connectionState,
+    error: webrtcError,
+    isAudioOnly,
+    retryCameraAccess,
+    toggleAudio,
+    toggleVideo,
+    endCall: disconnectWebRTC,
+    isAudioEnabled,
+    isVideoEnabled,
+  } = useWebRTCSocket({
+    signalingServerUrl: 'http://localhost:3001',
+    appointmentId,
+    userId,
+    userRole: userRole as 'doctor' | 'patient',
+    localVideoRef,
+    remoteVideoRef,
+    enabled: hydrated && hasJoinedCall, // Only enable when auth is hydrated and user has joined
+  });
 
-  // Supabase client
-  const supabase = createClient(
-    import.meta.env.VITE_SUPABASE_URL || "",
-    import.meta.env.VITE_SUPABASE_ANON_KEY || ""
-  );
+  const hasLocalVideo = localStream && localStream.getVideoTracks().length > 0;
 
-  const handleToggleMute = async () => {
-    if (audioTrackRef.current) {
-      const newState = !isMuted;
-      await audioTrackRef.current.setEnabled(newState);
-      setIsMuted(newState);
+  // Assign remote stream to video element when it becomes available
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      console.log('Remote stream assigned to remote video element');
     }
-  };
+  }, [remoteStream]);
 
-  const handleToggleCamera = async () => {
-    if (videoTrackRef.current) {
-      const newState = !isCameraOff;
-      await videoTrackRef.current.setEnabled(newState);
-      setIsCameraOff(newState);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      disconnectWebRTC();
+    };
+  }, [disconnectWebRTC]);
+
+  // Wait for auth to hydrate before rendering UI
+  if (!hydrated) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Derive connection states from hook's connectionState
+  const isConnecting = connectionState === 'connecting';
+  const isConnected = connectionState === 'connected';
+  const isFailed = connectionState === 'failed';
+
+  const handleConnect = () => {
+    // Strict payment check - do not allow connection if unpaid (unless doctor)
+    if (!effectiveIsPaid) {
+      alert("Payment required to join video consultation.");
+      return;
     }
+
+    // Set joined call state - WebRTC hook will handle the actual connection
+    setHasJoinedCall(true);
   };
 
   const handleEndCall = async () => {
     try {
-      // 1. Unpublish and close local tracks
-      if (audioTrackRef.current) {
-        await audioTrackRef.current.close();
-        audioTrackRef.current = null;
-      }
-      if (videoTrackRef.current) {
-        await videoTrackRef.current.close();
-        videoTrackRef.current = null;
-      }
+      // Disconnect WebRTC
+      disconnectWebRTC();
 
-      // 2. Leave Agora channel
-      if (clientRef.current) {
-        await clientRef.current.leave();
-        setIsConnected(false);
-      }
-      
-      // 3. Update Supabase with proper call end status
-      const sb = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY
-      );
-      
-      await sb
+      // Update Supabase with proper call end status
+      await supabase
         .from("appointments")
         .update({
           visit_status: "completed",
@@ -114,7 +145,7 @@ export function VideoConsultationContainer({
         })
         .eq("id", appointmentId);
 
-      // 4. Role-based navigation redirect
+      // Role-based navigation redirect
       if (isDoctor) {
         // Doctor returns to clinical dashboard
         navigate({ to: '/staff/doctor/dashboard' });
@@ -132,116 +163,6 @@ export function VideoConsultationContainer({
       }
     }
   };
-
-  const handleConnect = async () => {
-    // Strict payment check - do not allow connection if unpaid (unless doctor)
-    if (!effectiveIsPaid) {
-      alert("Payment required to join video consultation.");
-      return;
-    }
-
-    // Set joined call state before initializing
-    setHasJoinedCall(true);
-
-    const appId = import.meta.env.VITE_AGORA_APP_ID || "db0b41794c224e549c92102892b75081";
-
-    try {
-      setIsConnecting(true);
-
-      // Role-based distinct UID so Doctor and Patient don't share the same ID
-      const uid = isDoctor ? 1001 : 2002;
-
-      // Normalize channel name - both Doctor and Patient must join the EXACT same channel
-      const channelName = String(appointmentId).trim();
-
-      console.log('Agora: Connecting to channel:', channelName, 'with UID:', uid, 'as Doctor:', isDoctor);
-
-      const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-      clientRef.current = client;
-
-      // ── Set up event listeners BEFORE calling join() ──────────────────────────
-      client.on("user-published", async (remoteUser, mediaType) => {
-        console.log('Agora: Remote user published:', remoteUser.uid, mediaType);
-        await client.subscribe(remoteUser, mediaType);
-        
-        if (mediaType === "video") {
-          // Attach remote stream to single unified container
-          setRemoteConnected(true);
-          setTimeout(() => {
-            const remoteContainer = document.getElementById(REMOTE_VIDEO_ID);
-            if (remoteContainer) {
-              remoteUser.videoTrack?.play(REMOTE_VIDEO_ID);
-            }
-          }, 100);
-        }
-        
-        if (mediaType === "audio") {
-          remoteUser.audioTrack?.play();
-        }
-      });
-
-      client.on("user-unpublished", (remoteUser, mediaType) => {
-        console.log('Agora: Remote user unpublished:', remoteUser.uid);
-        if (mediaType === "video") {
-          remoteUser.videoTrack?.stop();
-          setRemoteConnected(false);
-        }
-      });
-
-      client.on("user-left", (remoteUser) => {
-        console.log('Agora: Remote user left:', remoteUser.uid);
-        setRemoteConnected(false);
-      });
-
-      // Fetch token
-      const response = await fetch(`/api/agora-token?channelName=${channelName}&uid=${uid}`);
-      const data = await response.json();
-      if (!response.ok || !data.token) {
-        throw new Error(data.error || "Failed to retrieve valid Agora RTC token");
-      }
-
-      // Join channel
-      await client.join(data.appId || appId, channelName, data.token, uid);
-      console.log('Agora: Successfully joined channel:', channelName);
-
-      // Create local tracks
-      const [audioTrack, videoTrack] = await Promise.all([
-        AgoraRTC.createMicrophoneAudioTrack(),
-        AgoraRTC.createCameraVideoTrack(),
-      ]);
-      audioTrackRef.current = audioTrack;
-      videoTrackRef.current = videoTrack;
-
-      // Play local self-view in unified container
-      videoTrack.play(LOCAL_VIDEO_ID);
-
-      // Publish local tracks to channel
-      await client.publish([audioTrack, videoTrack]);
-      console.log('Agora: Published local tracks');
-
-      setIsConnecting(false);
-      setIsConnected(true);
-    } catch (error) {
-      console.error("Error connecting to video call:", error);
-      setIsConnecting(false);
-      alert("Failed to connect to video call. Please try again.");
-    }
-  };
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (audioTrackRef.current) {
-        audioTrackRef.current.close();
-      }
-      if (videoTrackRef.current) {
-        videoTrackRef.current.close();
-      }
-      if (clientRef.current) {
-        clientRef.current.leave();
-      }
-    };
-  }, []);
 
   const STATUS_COLORS: Record<string, string> = {
     SCHEDULED: "bg-blue-500/10 text-blue-600 border-blue-500/20",
@@ -276,10 +197,12 @@ export function VideoConsultationContainer({
           
           {/* Payment Gate Overlay - Show ONLY when unpaid */}
           {!effectiveIsPaid && (
-            <PaymentGate 
-              onPayment={onPayment} 
+            <PaymentGate
+              onPayment={onPayment}
+              onPaymentSuccess={onPaymentSuccess}
               isProcessingPayment={isProcessingPayment}
               amount={appointment.consultation_fee || 100}
+              appointmentId={appointmentId}
             />
           )}
 
@@ -325,34 +248,73 @@ export function VideoConsultationContainer({
           {effectiveIsPaid && hasJoinedCall && (
             <div className="fixed inset-0 lg:relative lg:h-full lg:p-2 bg-black lg:bg-transparent z-40 lg:z-auto">
               
+              {/* Media Error / Camera Retry Banner */}
+              {webrtcError && (
+                <div className="absolute top-4 left-4 z-50 bg-amber-600/90 text-white px-3 py-1.5 rounded-lg text-xs flex items-center gap-2 backdrop-blur-md shadow-lg border border-amber-500/50">
+                  <span>{webrtcError}</span>
+                  <Button
+                    className="h-6 text-[10px] px-2 bg-white text-slate-900 hover:bg-slate-100 font-medium"
+                    onClick={retryCameraAccess}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Retry Camera
+                  </Button>
+                </div>
+              )}
+
               {/* Unified Remote Video Container - Responsive for both desktop and mobile */}
-              <div 
-                id={REMOTE_VIDEO_ID}
-                className="relative w-full h-full bg-slate-950 overflow-hidden lg:rounded-xl flex items-center justify-center"
-              >
-                {/* Fallback Overlay when Remote User is NOT connected */}
-                {!remoteConnected && (
+              <div className="relative w-full h-full bg-slate-950 overflow-hidden lg:rounded-xl flex items-center justify-center">
+                {/* WebRTC Remote Video */}
+                {remoteStream ? (
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  /* Fallback Overlay when Remote User is NOT connected */
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-white z-10">
                     <div className="animate-pulse flex flex-col items-center gap-3 lg:gap-4">
                       <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
                         <Video className="w-8 h-8 lg:w-10 lg:h-10 text-blue-400"/>
                       </div>
-                      <p className="text-lg lg:text-xl font-medium text-slate-300">Waiting for participant to join...</p>
+                      <p className="text-lg lg:text-xl font-medium text-slate-300">
+                        {connectionState === 'connecting' ? 'Connecting to peer...' : 'Waiting for participant to join...'}
+                      </p>
                     </div>
                   </div>
                 )}
 
                 {/* Unified Self-View (PIP) - Responsive positioning */}
-                <div 
-                  id={LOCAL_VIDEO_ID}
-                  className="absolute top-4 right-4 w-[100px] h-[140px] lg:bottom-4 lg:top-auto lg:w-48 lg:h-36 bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 transition-all lg:hover:scale-105"
-                >
+                <div className="absolute top-4 right-4 w-[100px] h-[140px] lg:bottom-4 lg:top-auto lg:w-48 lg:h-36 bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 transition-all lg:hover:scale-105 flex items-center justify-center">
                   <span className="absolute top-1 left-1 lg:top-2 lg:left-2 px-1 lg:px-2 py-0.5 bg-black/60 lg:bg-black/70 rounded text-[8px] lg:text-[10px] text-white/80 lg:text-white/90 z-30 font-medium backdrop-blur-sm">
                     You
                   </span>
-                  {isCameraOff && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 z-10">
-                      <VideoOff className="h-6 w-6 lg:h-8 lg:w-8 text-slate-400 lg:text-slate-500" />
+                  
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className={cn("w-full h-full object-cover", (!isVideoEnabled || isAudioOnly || !hasLocalVideo) && "hidden")}
+                  />
+
+                  {(!isVideoEnabled || isAudioOnly || !hasLocalVideo) && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/95 text-slate-400 p-2 text-center">
+                      <VideoOff className="h-6 w-6 mb-1 text-slate-500"/>
+                      <span className="text-[10px] text-slate-300 font-medium">
+                        {isAudioOnly ? "Camera Locked" : "Video Off"}
+                      </span>
+                      {isAudioOnly && (
+                        <button
+                          onClick={retryCameraAccess}
+                          className="text-[9px] text-blue-400 underline mt-1 hover:text-blue-300 transition font-medium"
+                        >
+                          Enable Camera
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -367,33 +329,33 @@ export function VideoConsultationContainer({
 
               {/* Mute Button */}
               <Button
-                variant={isMuted ? "destructive" : "secondary"}
+                variant={!isAudioEnabled ? "destructive" : "secondary"}
                 size="icon"
                 className="rounded-full h-10 w-10 sm:h-10 sm:w-10 precise-button"
-                onClick={handleToggleMute}
+                onClick={toggleAudio}
               >
-                {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                {!isAudioEnabled ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </Button>
 
               {/* Camera Button */}
               <Button
-                variant={isCameraOff ? "destructive" : "secondary"}
+                variant={!isVideoEnabled ? "destructive" : "secondary"}
                 size="icon"
                 className="rounded-full h-10 w-10 sm:h-10 sm:w-10 precise-button"
-                onClick={handleToggleCamera}
+                onClick={toggleVideo}
               >
-              {isCameraOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
-            </Button>
+                {!isVideoEnabled ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+              </Button>
 
-            {/* End Call Button */}
-            <Button
-              variant="destructive"
-              size="icon"
-              className="rounded-full h-10 w-10 sm:h-10 sm:w-10 precise-button"
-              onClick={handleEndCall}
-            >
-              <PhoneOff className="h-5 w-5" />
-            </Button>
+              {/* End Call Button */}
+              <Button
+                variant="destructive"
+                size="icon"
+                className="rounded-full h-10 w-10 sm:h-10 sm:w-10 precise-button"
+                onClick={handleEndCall}
+              >
+                <PhoneOff className="h-5 w-5" />
+              </Button>
 
           </div>
           )}

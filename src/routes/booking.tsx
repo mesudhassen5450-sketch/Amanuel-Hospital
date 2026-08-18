@@ -206,7 +206,7 @@ function BookingPage() {
         <section className="py-12 md:py-20 px-4">
           <div className="mx-auto max-w-2xl">
             <Card className="border border-border bg-card shadow-xl rounded-3xl overflow-hidden animate-fade-in">
-              <div className="h-2 bg-gradient-to-r from-primary via-emerald-500 to-primary" />
+              <div className="h-2 bg-gradient-to-r from-primary via-blue-500 to-primary" />
               <CardHeader className="text-center p-6 sm:p-8 border-b border-border/40 bg-primary/5">
                 <div className="flex justify-center mb-4">
                   <div className="bg-primary/10 p-3 rounded-full">
@@ -300,7 +300,7 @@ function BookingPage() {
                 <div className={cn(
                   "rounded-2xl border p-4 text-sm",
                   isCash
-                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                    ? "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400"
                     : "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400"
                 )}>
                   {isCash

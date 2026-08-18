@@ -14,12 +14,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import doctor1 from "@/assets/doctors.jpg";
-import doctor2 from "@/assets/doctors1.jpg";
-import doctor3 from "@/assets/doctors.jpg";
-import doctor4 from "@/assets/doctors1.jpg";
-import doctor5 from "@/assets/doctors.jpg";
-import doctor6 from "@/assets/doctors1.jpg";
+// Use public folder paths for doctor images
+const doctor1 = "/doctor1.jpg";
+const doctor2 = "/doctor2.jpg";
+const doctor3 = "/doctor3.jpg";
+const doctor4 = "/doctor4.jpg";
+const doctor5 = "/doctor1.jpg";
+const doctor6 = "/doctor2.jpg";
 import galleryLab from "@/assets/machine.jpg";
 import gallerySurgery from "@/assets/room.jpg";
 import galleryPediatrics from "@/assets/baby.jpg";
@@ -107,59 +108,66 @@ export interface Doctor {
   id: string;
   name: string;
   specialty: string;
-  experience: string;
+  experience: number;
   availableToday: boolean;
+  isOnline: boolean;
   photo: string;
 }
 
 export const doctors: Doctor[] = [
   {
-    id: "doctor",
-    name: "Dr. Amanuel Tesfaye",
-    specialty: "General Surgeon · Medical Director",
-    experience: "18+ years experience",
+    id: "1",
+    name: "Dr. Amanuel Kassa",
+    specialty: "Cardiologist",
+    experience: 15,
     availableToday: true,
-    photo: doctor1,
+    isOnline: false,
+    photo: "/doctor1.jpg",
   },
   {
-    id: "doctor2",
-    name: "Doctor Picture 2",
+    id: "2",
+    name: "Dr. Tigist Haile",
     specialty: "Pediatrician",
-    experience: "10+ years experience",
+    experience: 12,
     availableToday: true,
-    photo: doctor2,
+    isOnline: false,
+    photo: "/doctor2.jpg",
   },
   {
-    id: "doctor3",
-    name: "Doctor Picture 3",
-    specialty: "Internal Medicine Specialist",
-    experience: "22+ years experience",
+    id: "3",
+    name: "Dr. Bekele Gerba",
+    specialty: "Orthopedic Surgeon",
+    experience: 18,
     availableToday: false,
-    photo: doctor3,
+    isOnline: false,
+    photo: "/doctor3.jpg",
   },
   {
-    id: "doctor4",
-    name: "Doctor Picture 4",
-    specialty: "Obstetrician & Gynecologist",
-    experience: "14+ years experience",
+    id: "4",
+    name: "Dr. Selamawit Tadesse",
+    specialty: "Neurologist",
+    experience: 10,
     availableToday: true,
-    photo: doctor4,
+    isOnline: false,
+    photo: "/doctor1.jpg",
   },
   {
-    id: "doctor5",
-    name: "Doctor Picture 5",
-    specialty: "Radiologist",
-    experience: "9+ years experience",
+    id: "5",
+    name: "Dr. Kifle Demissie",
+    specialty: "Dermatologist",
+    experience: 8,
+    availableToday: true,
+    isOnline: false,
+    photo: "/doctor2.jpg",
+  },
+  {
+    id: "6",
+    name: "Dr. Almaz Bekele",
+    specialty: "Gynecologist",
+    experience: 14,
     availableToday: false,
-    photo: doctor5,
-  },
-  {
-    id: "doctor6",
-    name: "Doctor Picture 6",
-    specialty: "Emergency Medicine Physician",
-    experience: "8+ years experience",
-    availableToday: true,
-    photo: doctor6,
+    isOnline: false,
+    photo: "/doctor3.jpg",
   },
 ];
 

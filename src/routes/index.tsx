@@ -19,6 +19,7 @@ import {
 import { services, doctors } from "@/lib/site-data";
 import { useLanguage } from "@/lib/language-context";
 import { t, translations, translatedFaqs, translatedTestimonials, translatedStats } from "@/lib/translations";
+import { cn } from "@/lib/utils";
 import heroHospital from "@/assets/building.jpg";
 
 export const Route = createFileRoute("/")({
@@ -61,13 +62,13 @@ function Hero() {
 
       <div className="relative mx-auto w-full max-w-7xl px-4 py-32 lg:px-8">
         <div className="max-w-2xl">
-          <h1 className="mt-6 font-display text-4xl font-bold leading-tight text-primary-foreground md:text-6xl lg:text-7xl tracking-tight">
+          <h1 className="mt-6 font-display text-4xl font-extrabold leading-tight text-white md:text-6xl lg:text-7xl tracking-tight drop-shadow-md">
             {t(tr.title1, lang)}
             <span className="block text-white">
               {t(tr.title2, lang)}
             </span>
           </h1>
-          <p className="mt-6 max-w-xl text-base text-primary-foreground/85 md:text-lg leading-relaxed">
+          <p className="mt-6 max-w-xl text-base text-slate-100 drop-shadow-sm md:text-lg leading-relaxed">
             {t(tr.subtitle, lang)}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -85,7 +86,7 @@ function Hero() {
           </div>
         </div>
 
-        <div className="mt-16 grid grid-cols-2 gap-6 rounded-2xl sharp-card bg-card p-6 md:grid-cols-4 md:p-8 border">
+        <div className="mt-16 grid grid-cols-2 gap-6 rounded-2xl sharp-card bg-white dark:bg-slate-950 p-6 md:grid-cols-4 md:p-8 border border-border dark:border-slate-800">
           {stats.map((s) => (
             <StatCounter key={s.label} value={s.value} suffix={s.suffix} label={s.label} />
           ))}
@@ -180,15 +181,33 @@ function DoctorsPreview() {
               <Reveal key={doc.id} delay={i * 60}>
                 <div className="sharp-card technical-focus bg-card border rounded-xl p-6">
                   <div className="aspect-square overflow-hidden rounded-lg mb-4 border border-border">
-                    <img src={doc.image} alt={`Dr. ${doc.name}`} className="h-full w-full object-cover" />
+                    <img
+                      src={doc.photo}
+                      alt={`Dr. ${doc.name}`}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/doctor1.jpg";
+                      }}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="font-display font-semibold text-lg">Dr. {doc.name}</h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-display font-semibold text-lg">Dr. {doc.name}</h3>
+                      <span className={cn(
+                        "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium",
+                        doc.isOnline
+                          ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                      )}>
+                        <span className={cn("w-1.5 h-1.5 rounded-full", doc.isOnline ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
+                        {doc.isOnline ? "Online" : "Offline"}
+                      </span>
+                    </div>
                     <p className="text-sm text-primary font-medium">{doc.specialty}</p>
                     <p className="text-xs text-muted-foreground mono-technical">{doc.experience}</p>
                     <div className="flex items-center gap-1 pt-2">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium mono-technical">{doc.rating}</span>
+                      <span className="text-sm font-medium mono-technical">4.9</span>
                     </div>
                     <Button asChild variant="outline" className="w-full mt-4 rounded-xl precise-button">
                       <Link to="/booking">
@@ -358,22 +377,22 @@ function CtaBand() {
     <section className="py-20">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
         <Reveal>
-          <div className="sharp-card relative overflow-hidden rounded-3xl px-6 py-14 text-center md:px-12 md:py-20 bg-primary border-primary-foreground/20">
-            <h2 className="font-display text-2xl font-bold text-primary-foreground md:text-4xl">
+          <div className="sharp-card relative overflow-hidden rounded-3xl px-6 py-14 text-center md:px-12 md:py-20 bg-white dark:bg-slate-900/90 border border-border dark:border-slate-800 transition-colors">
+            <h2 className="font-display text-2xl font-extrabold text-slate-900 dark:text-white md:text-4xl tracking-tight">
               {t(tr.ctaTitle, lang)}
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-primary-foreground/85 md:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-slate-600 dark:text-slate-300 font-medium text-sm md:text-lg">
               {t(tr.ctaSub, lang)}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Button asChild size="lg" variant="secondary"
-                className="rounded-xl px-8 precise-button">
+                className="rounded-xl px-8 precise-button bg-blue-600 hover:bg-blue-700 text-white">
                 <Link to="/booking">
                   {t(translations.nav.bookAppt, lang)}
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline"
-                className="rounded-xl border-primary-foreground/40 bg-transparent px-8 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground precise-button">
+                className="rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 px-8 precise-button">
                 <Link to="/contact">{t(tr.contactUs, lang)}</Link>
               </Button>
             </div>

@@ -3,67 +3,76 @@ import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, CalendarDays, CreditCard, LogOut,
   Stethoscope, Menu, X, Clock, ClipboardList, FlaskConical, TestTube, Pill, CheckCircle2, Package, Shield,
+  Sun, Moon,
 } from "lucide-react";
 import { useStaffAuth } from "@/lib/staff-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useTheme } from "@/lib/theme-context";
+import { useDoctorCallNotifications } from "@/lib/useDoctorCallNotifications";
+import { IncomingCallModal } from "@/components/telemedicine/IncomingCallModal";
 
 const RECEPTION_NAV = [
-  { to: "/staff/dashboard",    label: "Dashboard",     icon: LayoutDashboard },
-  { to: "/staff/patients",     label: "Patients",      icon: Users },
-  { to: "/staff/appointments", label: "Appointments",  icon: CalendarDays },
-  { to: "/staff/payments",     label: "Payments",      icon: CreditCard },
+  { to: "/staff/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/staff/patients", label: "Patients", icon: Users },
+  { to: "/staff/appointments", label: "Appointments", icon: CalendarDays },
+  { to: "/staff/payments", label: "Payments", icon: CreditCard },
 ];
 
 const ADMIN_NAV = [
-  { to: "/staff/admin",        label: "Admin Dashboard", icon: LayoutDashboard },
-  { to: "/staff/patients",     label: "Patients",        icon: Users },
-  { to: "/staff/appointments", label: "Appointments",    icon: CalendarDays },
-  { to: "/staff/payments",     label: "Payments",        icon: CreditCard },
+  { to: "/staff/admin", label: "Admin Dashboard", icon: LayoutDashboard },
+  { to: "/staff/patients", label: "Patients", icon: Users },
+  { to: "/staff/appointments", label: "Appointments", icon: CalendarDays },
+  { to: "/staff/payments", label: "Payments", icon: CreditCard },
 ];
 
 const CASHIER_NAV = [
-  { to: "/staff/payments",        label: "Payments",        icon: CreditCard },
-  { to: "/staff/appointments",    label: "Appointments",    icon: CalendarDays },
-  { to: "/staff/patients",        label: "Patients",        icon: Users },
+  { to: "/staff/payments", label: "Payments", icon: CreditCard },
+  { to: "/staff/appointments", label: "Appointments", icon: CalendarDays },
+  { to: "/staff/patients", label: "Patients", icon: Users },
 ];
 
 const DOCTOR_NAV = [
-  { to: "/staff/doctor/dashboard",    label: "Doctor Dashboard",  icon: LayoutDashboard },
-  { to: "/staff/doctor/queue",        label: "Waiting Patients",  icon: Clock },
-  { to: "/staff/patients",            label: "Patient Records",   icon: Users },
-  { to: "/staff/doctor/lab-results",  label: "Lab Results",       icon: TestTube },
+  { to: "/staff/doctor/dashboard", label: "Doctor Dashboard", icon: LayoutDashboard },
+  { to: "/staff/doctor/queue", label: "Waiting Patients", icon: Clock },
+  { to: "/staff/patients", label: "Patient Records", icon: Users },
+  { to: "/staff/doctor/lab-results", label: "Lab Results", icon: TestTube },
 ];
 
 const LABORATORY_NAV = [
-  { to: "/staff/laboratory/dashboard", label: "Lab Dashboard",    icon: LayoutDashboard },
-  { to: "/staff/laboratory/requests",  label: "Lab Requests",     icon: FlaskConical },
-  { to: "/staff/laboratory/results",   label: "Results",          icon: TestTube },
+  { to: "/staff/laboratory/dashboard", label: "Lab Dashboard", icon: LayoutDashboard },
+  { to: "/staff/laboratory/requests", label: "Lab Requests", icon: FlaskConical },
+  { to: "/staff/laboratory/results", label: "Results", icon: TestTube },
 ];
 
 const PHARMACY_NAV = [
-  { to: "/staff/pharmacy/dashboard",     label: "Pharmacy",        icon: LayoutDashboard },
-  { to: "/staff/pharmacy/prescriptions", label: "Prescriptions",   icon: Pill },
-  { to: "/staff/pharmacy/dispensed",     label: "Dispensed",       icon: CheckCircle2 },
-  { to: "/staff/pharmacy/inventory",     label: "Inventory",       icon: Package },
+  { to: "/staff/pharmacy/dashboard", label: "Pharmacy", icon: LayoutDashboard },
+  { to: "/staff/pharmacy/prescriptions", label: "Prescriptions", icon: Pill },
+  { to: "/staff/pharmacy/dispensed", label: "Dispensed", icon: CheckCircle2 },
+  { to: "/staff/pharmacy/inventory", label: "Inventory", icon: Package },
 ];
 
 export function StaffLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useStaffAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-
-  const isDoctor   = user?.role === "doctor";
-  const isLab      = user?.role === "laboratory";
-  const isPharmacy = user?.role === "pharmacy";
-  const isAdmin    = user?.role === "admin";
-  const isCashier  = user?.role === "cashier";
+  const { theme, toggleTheme } = useTheme();
+  const userRole = user?.role ? (user.role as string).toLowerCase() : null;
+  const isDoctor   = userRole === "doctor" || user?.username === "doctor";
+  const isLab      = userRole === "laboratory";
+  const isPharmacy = userRole === "pharmacy";
+  const isAdmin    = userRole === "admin";
+  const isCashier  = userRole === "cashier";
   const NAV = isAdmin ? ADMIN_NAV : isDoctor ? DOCTOR_NAV : isLab ? LABORATORY_NAV : isPharmacy ? PHARMACY_NAV : isCashier ? CASHIER_NAV : RECEPTION_NAV;
   const portalLabel = isAdmin ? "Admin Portal" : isDoctor ? "Doctor Portal" : isLab ? "Lab Portal" : isPharmacy ? "Pharmacy Portal" : isCashier ? "Cashier Portal" : "Staff Portal";
 
-  const handleLogout = () => {
-    logout();
+  // Global Doctor Call Notifications
+  const doctorUsername = isDoctor ? (user?.username || "doctor") : "";
+  const { incomingCall, closeIncomingCall } = useDoctorCallNotifications(doctorUsername);
+
+  const handleLogout = async () => {
+    await logout();
     toast.info("Logged out.");
     window.location.href = "/staff/login";
   };
@@ -140,6 +149,15 @@ export function StaffLayout({ children }: { children: ReactNode }) {
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <div className="flex-1" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="rounded-full"
+            title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+          >
+            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </Button>
           <span className="text-xs text-muted-foreground hidden sm:block">
             {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </span>
@@ -149,6 +167,16 @@ export function StaffLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Global Doctor Incoming Call Modal */}
+      {isDoctor && (
+        <IncomingCallModal
+          open={!!incomingCall}
+          onOpenChange={closeIncomingCall}
+          appointment={incomingCall}
+          currentDoctorUsername={user?.username || "doctor"}
+        />
+      )}
     </div>
   );
 }

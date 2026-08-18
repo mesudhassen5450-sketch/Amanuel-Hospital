@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, CheckCircle, Clock } from "lucide-react";
+import { Loader2, CheckCircle, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { requestVideoConsultation } from "@/lib/telemedicine-server";
+import { supabase } from "@/lib/supabase";
 
 interface PatientRequestModalProps {
   open: boolean;
@@ -33,6 +34,89 @@ export function PatientRequestModal({ open, onOpenChange, doctor }: PatientReque
   const [status, setStatus] = useState<RequestStatus>("idle");
   const [appointmentId, setAppointmentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Supabase Realtime subscription for doctor availability updates
+  useEffect(() => {
+    let subscription: any = null;
+    let pollingInterval: NodeJS.Timeout | null = null;
+
+    if (appointmentId && status === "waiting") {
+      console.log("Setting up realtime subscription for appointment:", appointmentId);
+      const ACCEPTED_STATUSES = ["IN_PROGRESS", "ACCEPTED", "APPROVED", "RINGING", "DOCTOR_READY"];
+
+      subscription = supabase
+        .channel(`appointment_${appointmentId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "appointments",
+            filter: `id=eq.${appointmentId}`,
+          },
+          (payload) => {
+            const updatedAppt = payload.new as any;
+            const callStatus = updatedAppt?.call_status;
+            const apptStatus = updatedAppt?.status;
+            console.log("Appointment status updated via realtime:", { apptStatus, callStatus, paymentStatus: updatedAppt?.payment_status });
+
+            if (ACCEPTED_STATUSES.includes(apptStatus) || ACCEPTED_STATUSES.includes(callStatus)) {
+              if (updatedAppt.payment_status === "paid") {
+                window.location.href = `/consultation/room/${appointmentId}`;
+              } else {
+                setStatus("available");
+              }
+            } else if (callStatus === "DOCTOR_DECLINED" || apptStatus === "DECLINED" || callStatus === "DECLINED") {
+              setStatus("declined");
+            }
+          }
+        )
+        .subscribe((subStatus) => {
+          console.log("Subscription status:", subStatus);
+        });
+
+      // Fallback polling mechanism in case Realtime fails
+      pollingInterval = setInterval(async () => {
+        try {
+          const { data, error } = await supabase
+            .from("appointments")
+            .select("status, call_status, payment_status")
+            .eq("id", appointmentId)
+            .single();
+
+          if (error) {
+            console.error("Polling error:", error);
+            return;
+          }
+
+          console.log("Polling appointment status:", data);
+
+          if (ACCEPTED_STATUSES.includes(data?.status) || ACCEPTED_STATUSES.includes(data?.call_status)) {
+            if (pollingInterval) clearInterval(pollingInterval);
+            if (data?.payment_status === "paid") {
+              window.location.href = `/consultation/room/${appointmentId}`;
+            } else {
+              setStatus("available");
+            }
+          } else if (data?.call_status === "DOCTOR_DECLINED" || data?.status === "DECLINED" || data?.call_status === "DECLINED") {
+            if (pollingInterval) clearInterval(pollingInterval);
+            setStatus("declined");
+          }
+        } catch (err) {
+          console.error("Polling fetch error:", err);
+        }
+      }, 3000); // Poll every 3 seconds
+    }
+
+    return () => {
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [appointmentId, status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,21 +139,14 @@ export function PatientRequestModal({ open, onOpenChange, doctor }: PatientReque
       setAppointmentId(result.appointmentId);
       setStatus("waiting");
 
-      // Start listening for doctor response
-      // In production, this would use Supabase Realtime
-      listenForDoctorResponse(result.appointmentId);
+      // Store appointment ID and doctor username for payment success handler
+      sessionStorage.setItem("appointment_id", result.appointmentId);
+      sessionStorage.setItem("doctor_username", doctor.id); // doctor.id is the username
 
     } catch (err: any) {
       setError(err?.message || "Failed to request consultation");
       setStatus("error");
     }
-  };
-
-  const listenForDoctorResponse = (aptId: string) => {
-    // Mock real-time listener - in production, use Supabase Realtime
-    setTimeout(() => {
-      setStatus("available");
-    }, 5000); // Simulate doctor accepting after 5 seconds
   };
 
   const handleProceedToPayment = () => {
@@ -195,13 +272,16 @@ export function PatientRequestModal({ open, onOpenChange, doctor }: PatientReque
           )}
 
           {status === "declined" && (
-            <div className="text-center py-8">
-              <p className="text-foreground font-medium mb-2">
-                Dr. {doctor.name} is currently unavailable
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Please try again later or select another doctor
-              </p>
+            <div className="text-center py-8 space-y-4">
+              <XCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
+              <div>
+                <p className="text-foreground font-bold text-lg mb-1">
+                  Dr. {doctor.name} is currently unavailable
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Please try again later or select another doctor
+                </p>
+              </div>
               <Button onClick={handleClose} variant="outline">
                 Close
               </Button>

@@ -59,10 +59,10 @@ function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground font-display">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-display">
               Reception Dashboard
             </h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
               Welcome back, <span className="font-semibold capitalize text-primary">{user?.username}</span> ·{" "}
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             </p>
@@ -75,16 +75,16 @@ function DashboardPage() {
 
         {/* Stats grid */}
         {loading ? (
-          <div className="flex items-center justify-center h-48 text-muted-foreground gap-2">
+          <div className="flex items-center justify-center h-48 text-slate-500 dark:text-slate-400 gap-2">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading stats...
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-10">
             {STAT_CARDS.map(({ label, value, icon: Icon, color, bg }) => (
-              <Card key={label} className="border border-border/60 bg-card shadow-sm rounded-2xl hover:shadow-md transition-shadow">
+              <Card key={label} className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl hover:shadow-md transition-shadow">
                 <CardContent className="p-5 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">{label}</p>
                     <p className={`text-3xl font-extrabold font-display ${color}`}>{value}</p>
                   </div>
                   <div className={`${bg} p-3 rounded-xl ${color}`}>
@@ -99,40 +99,40 @@ function DashboardPage() {
         {/* Quick actions */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link to="/staff/patients/new">
-            <Card className="border border-border/60 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer rounded-2xl">
+            <Card className="border border-slate-200 dark:border-slate-800 bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors cursor-pointer rounded-2xl">
               <CardContent className="p-5 flex items-center gap-4">
-                <div className="bg-primary/15 p-3 rounded-xl text-primary">
+                <div className="bg-blue-500/15 p-3 rounded-xl text-blue-600 dark:text-blue-400">
                   <UserPlus className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Register Patient</p>
-                  <p className="text-xs text-muted-foreground">New patient + MRN</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">Register Patient</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">New patient + MRN</p>
                 </div>
               </CardContent>
             </Card>
           </Link>
           <Link to="/staff/appointments">
-            <Card className="border border-border/60 bg-blue-500/5 hover:bg-blue-500/10 transition-colors cursor-pointer rounded-2xl">
+            <Card className="border border-slate-200 dark:border-slate-800 bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors cursor-pointer rounded-2xl">
               <CardContent className="p-5 flex items-center gap-4">
-                <div className="bg-blue-500/15 p-3 rounded-xl text-blue-500">
+                <div className="bg-blue-500/15 p-3 rounded-xl text-blue-600 dark:text-blue-400">
                   <CalendarDays className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Today's Appointments</p>
-                  <p className="text-xs text-muted-foreground">Check in & manage</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">Today's Appointments</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Check in & manage</p>
                 </div>
               </CardContent>
             </Card>
           </Link>
           <Link to="/staff/patients">
-            <Card className="border border-border/60 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors cursor-pointer rounded-2xl">
+            <Card className="border border-slate-200 dark:border-slate-800 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer rounded-2xl">
               <CardContent className="p-5 flex items-center gap-4">
-                <div className="bg-emerald-500/15 p-3 rounded-xl text-emerald-500">
+                <div className="bg-emerald-500/15 p-3 rounded-xl text-emerald-600 dark:text-emerald-400">
                   <Users className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Patient List</p>
-                  <p className="text-xs text-muted-foreground">Search & view records</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">Patient List</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Search & view records</p>
                 </div>
               </CardContent>
             </Card>

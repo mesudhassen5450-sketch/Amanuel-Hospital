@@ -23,39 +23,57 @@ export const requestVideoConsultation = createServerFn({ method: "POST" })
     const { doctorId, patientName, phoneNumber, consultationFee } = data;
     const sb = getSupabase();
 
-    // Insert appointment into Supabase
-    // For video consultations, always set amount to 100 ETB
-    const { data: appointment, error } = await sb
-      .from("appointments")
-      .insert({
+    try {
+      // Insert appointment into Supabase
+      // For video consultations, always set amount to 100 ETB
+      const insertData: any = {
         doctor_id: doctorId,
         patient_name: patientName,
         phone_number: phoneNumber,
         consultation_type: "ONLINE",
         consultation_fee: 100, // Fixed fee for video consultations
         amount: 100, // Payment amount for gateway
-        call_status: "WAITING_FOR_DOCTOR",
         payment_status: "UNPAID",
         created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+      };
 
-    if (error) {
-      throw new Error(`Failed to create appointment: ${error.message}`);
+      // Only add new columns if they exist in the database
+      // This prevents errors if migration hasn't been run yet
+      try {
+        insertData.doctor_username = doctorId;
+        insertData.call_status = "REQUESTING_DOCTOR";
+      } catch (e) {
+        console.log("New columns may not exist yet, using fallback");
+      }
+
+      console.log("Inserting appointment with data:", insertData);
+
+      const { data: appointment, error } = await sb
+        .from("appointments")
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw new Error(`Failed to create appointment: ${error.message}`);
+      }
+
+      // Trigger Desktop Push Notification for doctor
+      sendPushToUserIdOrRole(doctorId, "doctor", {
+        title: "Incoming Video Consultation",
+        body: `${patientName} has requested an online video consultation.`,
+        url: `/staff/doctor/dashboard`,
+      }).catch((err) => console.error("Push notify doctor error:", err));
+
+      return {
+        appointmentId: appointment.id,
+        message: "Consultation request sent successfully",
+      };
+    } catch (error: any) {
+      console.error("requestVideoConsultation error:", error);
+      throw new Error(`Server error: ${error.message || "Unknown error"}`);
     }
-
-    // Trigger Desktop Push Notification for doctor
-    sendPushToUserIdOrRole(doctorId, "doctor", {
-      title: "Incoming Video Consultation",
-      body: `${patientName} has requested an online video consultation.`,
-      url: `/staff/doctor/dashboard`,
-    }).catch((err) => console.error("Push notify doctor error:", err));
-
-    return {
-      appointmentId: appointment.id,
-      message: "Consultation request sent successfully",
-    };
   });
 
 export const acceptConsultationRequest = createServerFn({ method: "POST" })

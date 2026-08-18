@@ -53,6 +53,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   updateStaffAccount:       ["admin"],
   resetStaffPassword:       ["admin"],
   toggleStaffStatus:        ["admin"],
+  deleteStaffAccount:       ["admin"],
+  updateDoctorOnlineStatus: ["doctor", "admin"],
 };
 
 function checkRole(fnName: string, callerRole?: string): void {
@@ -151,22 +153,19 @@ export const getReceptionAppointments = createServerFn({ method: "POST" })
       .order("appointment_time", { ascending: true });    if (data.date) q = q.eq("appointment_date", data.date);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
+    // Normalise field names so admin.tsx UI works unchanged
     return (rows ?? []).map((r: any) => ({
-      id:              String(r.id),
-      fullName:        r.full_name,
-      phone:           r.phone,
+      id: String(r.id),
+      fullName: r.full_name || r.patient_name, // Use patient_name if full_name is null
+      phoneNumber: r.phone || r.phone_number,
       appointmentDate: r.appointment_date,
       appointmentTime: r.appointment_time,
-      paymentMethod:   r.payment_method,
-      amount:          r.amount,
-      bookingStatus:   r.booking_status,
-      paymentStatus:   r.payment_status,
-      visitStatus:     r.visit_status ?? "booked",
-      patientId:       r.patient_id ?? null,
-      patientMRN:      r.patients?.mrn ?? null,
-      createdAt:       r.created_at,
-      reminderSmsSent: r.reminder_sms_sent,
-      reminderSmsSentAt: r.reminder_sms_sent_at,
+      paymentMethod: normaliseMethod(r.payment_method),
+      amount: r.amount,
+      status: normaliseStatus(r.booking_status, r.payment_status),
+      txRef: r.transaction_reference ?? undefined,
+      paymentStatus: r.payment_status,
+      createdAt: r.created_at,
       reminderSmsStatus: r.reminder_sms_status,
       reminderSmsError: r.reminder_sms_error,
     }));
@@ -248,8 +247,8 @@ export const getDoctorQueue = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
       id:              String(r.id),
-      fullName:        r.full_name,
-      phone:           r.phone,
+      fullName:        r.full_name || r.patient_name,
+      phone:           r.phone || r.phone_number,
       appointmentDate: r.appointment_date,
       appointmentTime: r.appointment_time,
       paymentMethod:   r.payment_method,
@@ -1079,7 +1078,13 @@ export const getAllStaffAccounts = createServerFn({ method: "POST" })
       throw new Error(parsed.error ?? "Failed to fetch staff accounts");
     }
 
-    return parsed.data ?? [];
+    // Ensure is_online defaults to false for all staff accounts
+    const staffAccounts = (parsed.data ?? []).map((staff: any) => ({
+      ...staff,
+      is_online: Boolean(staff.is_online),
+    }));
+
+    return staffAccounts;
   });
 
 // ── Get single staff account by ID (admin only) ───────────────────────────────
@@ -1229,4 +1234,59 @@ export const toggleStaffStatus = createServerFn({ method: "POST" })
     }
 
     return parsed.data;
+  });
+
+// ── Delete staff account (admin only) ────────────────────────────────────────────
+export const deleteStaffAccount = createServerFn({ method: "POST" })
+  .validator((d: {
+    id: number;
+    callerRole?: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    checkRole("deleteStaffAccount", data.callerRole);
+    const sb = getSupabase();
+
+    const { data: result, error } = await sb.rpc("delete_staff_account", { p_id: data.id });
+    if (error) {
+      throw new Error(`Database error: ${error.message}. Please ensure supabase-phase9.5.sql has been executed.`);
+    }
+
+    const parsed = result as { success: boolean; message?: string; error?: string };
+    if (!parsed.success) {
+      throw new Error(parsed.error ?? "Failed to delete staff account");
+    }
+
+    return { success: true, message: parsed.message };
+  });
+
+// ── Update doctor online status (doctor/admin only) ─────────────────────────────
+export const updateDoctorOnlineStatus = createServerFn({ method: "POST" })
+  .validator((d: {
+    username: string;
+    isOnline: boolean;
+    callerRole?: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    checkRole("updateDoctorOnlineStatus", data.callerRole);
+    const sb = getSupabase();
+
+    // Use direct table update for reliable status changes
+    const updateData: any = { is_online: data.isOnline };
+    
+    // Only update last_login when setting online
+    if (data.isOnline) {
+      updateData.last_login = new Date().toISOString();
+    }
+
+    const { error } = await sb
+      .from("staff_accounts")
+      .update(updateData)
+      .eq("username", data.username.toLowerCase())
+      .eq("role", "doctor");
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}. Failed to update doctor online status.`);
+    }
+
+    return { success: true, message: `Doctor ${data.isOnline ? 'online' : 'offline'} status updated successfully` };
   });

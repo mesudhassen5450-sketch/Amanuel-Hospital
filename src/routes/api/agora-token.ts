@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { RtcTokenBuilder, RtcRole } from "agora-token";
+import pkg from "agora-token";
+const { RtcTokenBuilder, RtcRole } = pkg;
 
 export const Route = createFileRoute("/api/agora-token")({
   server: {

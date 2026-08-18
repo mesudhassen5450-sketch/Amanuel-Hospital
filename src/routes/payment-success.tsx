@@ -9,6 +9,7 @@ import { verifyChapaPayment } from "@/lib/chapa-server";
 import { addBookingServer } from "@/lib/admin-server";
 import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/translations";
+import { supabase } from "@/lib/supabase";
 
 interface PaymentSuccessSearch {
   tx_ref?: string;
@@ -90,6 +91,73 @@ function PaymentSuccessPage() {
               });
             } catch (serverErr) {
               console.error("Failed to save confirmed booking to server:", serverErr);
+            }
+
+            // Trigger call initiation for video consultations
+            // Check if this is a video consultation appointment
+            const appointmentId = sessionStorage.getItem("appointment_id");
+            const doctorUsername = sessionStorage.getItem("doctor_username");
+            if (appointmentId && doctorUsername) {
+              try {
+                // First, get the appointment details
+                const { data: appointmentData, error: fetchError } = await supabase
+                  .from("appointments")
+                  .select("*")
+                  .eq("id", appointmentId)
+                  .single();
+
+                if (fetchError || !appointmentData) {
+                  console.error("Failed to fetch appointment details:", fetchError);
+                  throw fetchError;
+                }
+
+                // Generate a unique room ID
+                const roomId = `room_${Date.now()}_${appointmentId}`;
+
+                // Insert into calls table for real-time signaling
+                const { error: callInsertError } = await supabase
+                  .from("calls")
+                  .insert({
+                    patient_id: appointmentData.patient_id || confirmedBooking.phoneNumber,
+                    patient_name: appointmentData.full_name || confirmedBooking.fullName,
+                    doctor_username: doctorUsername,
+                    appointment_id: appointmentId,
+                    status: "calling",
+                    room_id: roomId,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  });
+
+                if (callInsertError) {
+                  console.error("Failed to insert call record:", callInsertError);
+                  // Fallback: update appointment status directly
+                  await supabase
+                    .from("appointments")
+                    .update({
+                      call_status: "RINGING",
+                      payment_status: "paid",
+                      booking_status: "confirmed",
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq("id", appointmentId);
+                } else {
+                  console.log("Call record created with room_id:", roomId);
+                  
+                  // Update appointment status as well
+                  await supabase
+                    .from("appointments")
+                    .update({
+                      call_status: "RINGING",
+                      payment_status: "paid",
+                      booking_status: "confirmed",
+                      room_id: roomId,
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq("id", appointmentId);
+                }
+              } catch (callErr) {
+                console.error("Failed to trigger call initiation:", callErr);
+              }
             }
 
             setBooking(confirmedBooking);

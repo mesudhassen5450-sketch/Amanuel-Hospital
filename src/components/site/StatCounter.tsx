@@ -44,11 +44,11 @@ export function StatCounter({ value, suffix = "", label }: StatCounterProps) {
 
   return (
     <div ref={ref} className="text-center">
-      <div className="font-display text-3xl font-bold text-primary-foreground md:text-4xl">
+      <div className="font-display text-2xl font-extrabold text-slate-900 dark:text-white lg:text-3xl">
         {display.toLocaleString()}
         {suffix}
       </div>
-      <div className="mt-1 text-sm text-primary-foreground/80">{label}</div>
+      <div className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-300 lg:text-sm">{label}</div>
     </div>
   );
 }

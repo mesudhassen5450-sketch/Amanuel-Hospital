@@ -25,7 +25,7 @@ interface StaffUser {
 interface StaffAuthCtx {
   user: StaffUser | null;
   login:  (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   hydrated: boolean;
 }
@@ -128,17 +128,54 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user, expireSession]);
 
+  // ── Heartbeat & Tab Close Handler for Doctors ─────────────────────────────
+  useEffect(() => {
+    if (!user || user.role !== "doctor") return;
+
+    // Heartbeat every 30 seconds to keep doctor online
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        const { updateDoctorOnlineStatus } = await import("./staff-server");
+        await updateDoctorOnlineStatus({
+          data: { username: user.username, isOnline: true, callerRole: user.role || undefined },
+        });
+      } catch (err) {
+        console.error("Heartbeat failed:", err);
+      }
+    }, 30000);
+
+    // Set offline on tab close
+    const handleUnload = async () => {
+      try {
+        const { updateDoctorOnlineStatus } = await import("./staff-server");
+        await updateDoctorOnlineStatus({
+          data: { username: user.username, isOnline: false, callerRole: user.role || undefined },
+        });
+      } catch (err) {
+        console.error("Failed to set offline on tab close:", err);
+      }
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      window.removeEventListener("beforeunload", handleUnload);
+    };
+  }, [user]);
+
   // ── Login ─────────────────────────────────────────────────────────────────
   const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { validateStaffLogin } = await import("./staff-server");
+      const { validateStaffLogin, updateDoctorOnlineStatus } = await import("./staff-server");
       const result = await validateStaffLogin({ data: { username, password } });
 
       if (result.success && result.username && result.role) {
         const now = Date.now();
+        const normalizedRole = (result.role as string).toLowerCase() as StaffRole;
         const session: SessionData = {
           username:    result.username,
-          role:        result.role as StaffRole,
+          role:        normalizedRole,
           displayName: result.display_name ?? result.username,
           loginAt:     now,
           expiresAt:   now + SESSION_MAX_MS,
@@ -146,6 +183,18 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
         };
         writeSession(session);
         setUser({ username: session.username, role: session.role, displayName: session.displayName });
+
+        // Set doctor online status if logging in as doctor
+        if (normalizedRole === "doctor") {
+          try {
+            await updateDoctorOnlineStatus({
+              data: { username: result.username, isOnline: true, callerRole: normalizedRole || undefined },
+            });
+          } catch (err) {
+            console.error("Failed to update doctor online status on login:", err);
+          }
+        }
+
         return { success: true };
       }
 
@@ -157,7 +206,19 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
   };
 
   // ── Logout ────────────────────────────────────────────────────────────────
-  const logout = () => {
+  const logout = async () => {
+    // Set doctor offline status if logging out as doctor
+    if (user?.role === "doctor") {
+      try {
+        const { updateDoctorOnlineStatus } = await import("./staff-server");
+        await updateDoctorOnlineStatus({
+          data: { username: user.username, isOnline: false, callerRole: user.role || undefined },
+        });
+      } catch (err) {
+        console.error("Failed to update doctor online status on logout:", err);
+      }
+    }
+
     clearSession();
     setUser(null);
     // Replace history so back-button cannot return to protected page

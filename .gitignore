@@ -38,3 +38,5 @@ dist-ssr
 *.sw?
 bookings.json
 
+
+/src/generated/prisma

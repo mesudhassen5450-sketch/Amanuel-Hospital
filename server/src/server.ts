@@ -1,0 +1,207 @@
+import "dotenv/config";
+import express from "express";
+import http from "http";
+import cors from "cors";
+import { Server as SocketIOServer } from "socket.io";
+import healthRoutes from "./routes/health.routes.js";
+import authRoutes from "./routes/auth.routes.js";
+import staffRoutes from "./routes/staff.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
+import { setupCallSockets } from "./sockets/call.socket.js";
+import { prisma } from "./config/db.js";
+
+const app = express();
+const server = http.createServer(app);
+
+const PORT = Number(process.env.PORT) || 3001;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
+
+// ── Middlewares ─────────────────────────────────────────────────────────────
+app.use(
+  cors({
+    origin: CORS_ORIGIN,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ── HTTP Routes ─────────────────────────────────────────────────────────────
+app.use("/health", healthRoutes);
+app.use("/api/health", healthRoutes);
+
+// Authentication Routes
+app.use("/api/auth", authRoutes);
+
+// Staff Management Routes
+app.use("/api/staff", staffRoutes);
+
+// Payment Processing Routes
+app.use("/api/payments", paymentRoutes);
+
+app.get("/", (req, res) => {
+  res.json({
+    name: "Dr. Amanuel Hospital Backend Server",
+    status: "running",
+    version: "1.0.0",
+    endpoints: {
+      health: "/health",
+      auth: "/api/auth",
+      staff: "/api/staff",
+      payments: "/api/payments",
+    },
+  });
+});
+
+// ── Socket.IO Server & Real-Time Signaling ──────────────────────────────────
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: CORS_ORIGIN,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  transports: ["websocket", "polling"],
+});
+
+// ── Initialize Real-Time Call & Queue System (JWT-authenticated) ────────────
+setupCallSockets(io);
+console.log("[Socket.IO] Real-time call & queue system initialized");
+
+// ── Legacy Socket Events (for backward compatibility) ───────────────────────
+// In-memory mapping for registered doctors and room participants
+const connectedDoctors = new Map<string, string>(); // doctorUsername -> socketId
+const roomParticipants = new Map<string, Set<string>>(); // roomId -> Set of socketIds
+
+io.on("connection", (socket) => {
+  console.log(`[Socket.IO] Client connected: ${socket.id}`);
+
+  // Doctor registration for incoming call notifications
+  socket.on("register-doctor", (data: { doctorUsername?: string; doctorId?: string }) => {
+    const doctorUsername = (data.doctorUsername || data.doctorId || "").toLowerCase().trim();
+    if (doctorUsername) {
+      connectedDoctors.set(doctorUsername, socket.id);
+      console.log(`[Socket.IO] Doctor registered: ${doctorUsername} (${socket.id})`);
+    }
+  });
+
+  // Join video consultation room
+  socket.on("join-room", (data: { roomId: string; userId: string; userRole?: string }) => {
+    const { roomId, userId, userRole } = data;
+    if (!roomId) return;
+
+    socket.join(roomId);
+    if (!roomParticipants.has(roomId)) {
+      roomParticipants.set(roomId, new Set());
+    }
+    roomParticipants.get(roomId)!.add(socket.id);
+
+    console.log(`[Socket.IO] User ${userId} (${userRole || "participant"}) joined room: ${roomId}`);
+
+    // Notify other participants in room
+    socket.to(roomId).emit("user-joined", { userId, socketId: socket.id, userRole });
+  });
+
+  // Leave consultation room
+  socket.on("leave-room", (data: { roomId: string; userId: string }) => {
+    const { roomId, userId } = data;
+    if (!roomId) return;
+
+    socket.leave(roomId);
+    if (roomParticipants.has(roomId)) {
+      roomParticipants.get(roomId)!.delete(socket.id);
+    }
+
+    console.log(`[Socket.IO] User ${userId} left room: ${roomId}`);
+    socket.to(roomId).emit("user-left", { userId, socketId: socket.id });
+  });
+
+  // Real-time chat message broadcast
+  socket.on("send-message", (messageData: any) => {
+    const { roomId } = messageData;
+    if (!roomId) return;
+
+    console.log(`[Socket.IO] Real-time message in room ${roomId}:`, messageData.message);
+    io.to(roomId).emit("receive-message", messageData);
+  });
+
+  // Patient paid event
+  socket.on("patient-paid", (data: { appointmentId: string }) => {
+    console.log(`[Socket.IO] Patient paid notification for appointment: ${data.appointmentId}`);
+    io.emit("patient-paid", data);
+  });
+
+  // Call acceptance & rejection signaling
+  socket.on("accept-call", (data: { appointmentId: string; doctorUsername?: string }) => {
+    console.log(`[Socket.IO] Call accepted for appointment: ${data.appointmentId}`);
+    io.emit("call-accepted", data);
+  });
+
+  socket.on("decline-call", (data: { appointmentId: string; doctorUsername?: string }) => {
+    console.log(`[Socket.IO] Call declined for appointment: ${data.appointmentId}`);
+    io.emit("call-declined", data);
+  });
+
+  // WebRTC P2P Signaling Relays (Offer, Answer, ICE Candidate)
+  socket.on("offer", (data: { roomId: string; offer: any }) => {
+    socket.to(data.roomId).emit("offer", data);
+  });
+
+  socket.on("answer", (data: { roomId: string; answer: any }) => {
+    socket.to(data.roomId).emit("answer", data);
+  });
+
+  socket.on("ice-candidate", (data: { roomId: string; candidate: any }) => {
+    socket.to(data.roomId).emit("ice-candidate", data);
+  });
+
+  // Clean up on disconnect
+  socket.on("disconnect", () => {
+    console.log(`[Socket.IO] Client disconnected: ${socket.id}`);
+
+    // Remove from connected doctors
+    for (const [doctorUsername, sId] of connectedDoctors.entries()) {
+      if (sId === socket.id) {
+        connectedDoctors.delete(doctorUsername);
+        break;
+      }
+    }
+
+    // Remove from room participants
+    for (const [roomId, socketSet] of roomParticipants.entries()) {
+      if (socketSet.has(socket.id)) {
+        socketSet.delete(socket.id);
+        socket.to(roomId).emit("user-left", { socketId: socket.id });
+      }
+    }
+  });
+});
+
+// ── Start HTTP & Socket Server ───────────────────────────────────────────────
+server.listen(PORT, () => {
+  console.log(`
+  🏥 Dr. Amanuel Hospital Backend Server
+  🚀 HTTP & Socket.IO server running on http://localhost:${PORT}
+  📡 CORS allowed origin: ${CORS_ORIGIN}
+  ⚡ Health Check: http://localhost:${PORT}/health
+  🔐 Auth Endpoint: http://localhost:${PORT}/api/auth/login
+  `);
+});
+
+// ── Graceful Shutdown Handler ───────────────────────────────────────────────
+const gracefulShutdown = async (signal: string) => {
+  console.log(`\n[Server] ${signal} signal received. Closing connections...`);
+  try {
+    io.close(() => console.log("[Server] Socket.IO server closed."));
+    server.close(() => console.log("[Server] Express HTTP server closed."));
+    await prisma.$disconnect();
+    console.log("[Server] Prisma Database Client disconnected.");
+    process.exit(0);
+  } catch (err) {
+    console.error("[Server] Error during graceful shutdown:", err);
+    process.exit(1);
+  }
+};
+
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

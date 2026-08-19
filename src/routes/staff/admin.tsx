@@ -3,10 +3,7 @@ import { useState, useEffect } from "react";
 import { useStaffAuth } from "@/lib/staff-auth";
 import { StaffLayout } from "@/components/staff/StaffLayout";
 import { StaffGuard } from "@/components/staff/StaffGuard";
-import {
-  getAllStaffAccounts,
-  toggleStaffStatus,
-} from "@/lib/staff-server";
+import * as StaffAPI from "@/lib/api/staff-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -64,7 +61,6 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AddStaffModal } from "@/components/admin/AddStaffModal";
-import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/staff/admin")({
   head: () => ({
@@ -80,12 +76,12 @@ type StaffAccount = {
   id: number;
   username: string;
   role: string;
-  display_name: string | null;
-  is_active: boolean;
-  is_online: boolean;
-  last_seen: string | null;
-  created_at: string;
-  updated_at: string;
+  displayName: string | null;
+  isActive: boolean;
+  isOnline: boolean;
+  lastSeen: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 function AdminDashboardPage() {
@@ -130,13 +126,15 @@ function AdminDashboardPage() {
 
     try {
       setLoading(true);
-      const res = await getAllStaffAccounts({ data: { callerRole: user.role } });
-      setStaffAccounts(res);
+      const accounts = await StaffAPI.getAllStaffAccounts();
+      // Ensure we always set an array, fallback to empty array if undefined
+      setStaffAccounts(Array.isArray(accounts) ? accounts : []);
       setErrorState(null);
     } catch (error: any) {
       const msg = error?.message || "Failed to load staff accounts.";
       console.error("Fetch staff accounts error:", msg);
       setErrorState(msg);
+      setStaffAccounts([]); // Set empty array on error
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -149,45 +147,21 @@ function AdminDashboardPage() {
     }
   }, [user]);
 
-  // Supabase Realtime subscription for staff_accounts changes
-  useEffect(() => {
-    const channel = supabase
-      .channel('admin:staff_presence')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'staff_accounts' },
-        (payload) => {
-          setStaffAccounts((prev) =>
-            prev.map((acc) =>
-              acc.username === payload.new.username
-                ? { ...acc, is_online: payload.new.is_online, last_seen: payload.new.last_seen }
-                : acc
-            )
-          );
-        }
-      )
-      .subscribe();
+  // Stats calculations with safe navigation
+  const totalStaff = staffAccounts?.length ?? 0;
+  const activeStaff = staffAccounts?.filter((s) => s.isActive).length ?? 0;
+  const inactiveStaff = staffAccounts?.filter((s) => !s.isActive).length ?? 0;
+  const receptionCount = staffAccounts?.filter((s) => s.role === "reception").length ?? 0;
+  const cashierCount = staffAccounts?.filter((s) => s.role === "cashier").length ?? 0;
+  const doctorCount = staffAccounts?.filter((s) => s.role === "doctor").length ?? 0;
+  const labCount = staffAccounts?.filter((s) => s.role === "laboratory").length ?? 0;
+  const pharmacyCount = staffAccounts?.filter((s) => s.role === "pharmacy").length ?? 0;
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // Stats calculations
-  const totalStaff = staffAccounts.length;
-  const activeStaff = staffAccounts.filter((s) => s.is_active).length;
-  const inactiveStaff = staffAccounts.filter((s) => !s.is_active).length;
-  const receptionCount = staffAccounts.filter((s) => s.role === "reception").length;
-  const cashierCount = staffAccounts.filter((s) => s.role === "cashier").length;
-  const doctorCount = staffAccounts.filter((s) => s.role === "doctor").length;
-  const labCount = staffAccounts.filter((s) => s.role === "laboratory").length;
-  const pharmacyCount = staffAccounts.filter((s) => s.role === "pharmacy").length;
-
-  // Filter staff accounts
-  const filteredStaff = staffAccounts.filter((staff) => {
+  // Filter staff accounts with safe navigation
+  const filteredStaff = (staffAccounts || []).filter((staff) => {
     const matchesSearch =
       staff.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      staff.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      staff.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       staff.role?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === "all" || staff.role?.toLowerCase() === roleFilter.toLowerCase();
     return matchesSearch && matchesRole;
@@ -203,9 +177,9 @@ function AdminDashboardPage() {
     setSelectedStaff(staff);
     setEditForm({
       username: staff.username,
-      displayName: staff.display_name || "",
+      displayName: staff.displayName || "",
       role: staff.role,
-      isActive: staff.is_active,
+      isActive: staff.isActive,
     });
     setEditDialogOpen(true);
   };
@@ -214,16 +188,11 @@ function AdminDashboardPage() {
     if (!selectedStaff) return;
     try {
       setFormLoading(true);
-      const { updateStaffAccount } = await import("@/lib/staff-server");
-      await updateStaffAccount({
-        data: {
-          id: selectedStaff.id,
-          username: editForm.username,
-          role: editForm.role,
-          displayName: editForm.displayName,
-          isActive: editForm.isActive,
-          callerRole: (user?.role || getStaffRole()) as string | undefined,
-        },
+      await StaffAPI.updateStaffAccount(selectedStaff.id, {
+        username: editForm.username,
+        role: editForm.role,
+        displayName: editForm.displayName,
+        isActive: editForm.isActive,
       });
       toast.success("Staff account updated successfully");
       setEditDialogOpen(false);
@@ -256,13 +225,8 @@ function AdminDashboardPage() {
 
     try {
       setFormLoading(true);
-      const { resetStaffPassword } = await import("@/lib/staff-server");
-      await resetStaffPassword({
-        data: {
-          id: selectedStaff.id,
-          newPassword: resetPasswordForm.newPassword,
-          callerRole: user?.role as string | undefined,
-        },
+      await StaffAPI.resetStaffPassword(selectedStaff.id, {
+        newPassword: resetPasswordForm.newPassword,
       });
       toast.success("Password reset successfully");
       setResetPasswordForm({ newPassword: "", confirmPassword: "" });
@@ -284,11 +248,9 @@ function AdminDashboardPage() {
 
     try {
       setFormLoading(true);
-      await toggleStaffStatus({
-        data: { id: selectedStaff.id, callerRole: user?.role as string | undefined },
-      });
+      await StaffAPI.toggleStaffStatus(selectedStaff.id);
       toast.success(
-        `Staff account ${selectedStaff.is_active ? "deactivated" : "activated"} successfully`
+        `Staff account ${selectedStaff.isActive ? "deactivated" : "activated"} successfully`
       );
       setToggleStatusDialogOpen(false);
       fetchStaffAccounts();
@@ -309,10 +271,7 @@ function AdminDashboardPage() {
 
     try {
       setFormLoading(true);
-      const { deleteStaffAccount } = await import("@/lib/staff-server");
-      await deleteStaffAccount({
-        data: { id: selectedStaff.id, callerRole: user?.role as string | undefined },
-      });
+      await StaffAPI.deleteStaffAccount(selectedStaff.id);
       toast.success("Staff account deleted successfully");
       setDeleteDialogOpen(false);
       fetchStaffAccounts();
@@ -539,7 +498,7 @@ function AdminDashboardPage() {
                   </CardDescription>
                 </div>
                 <Badge variant="outline" className="rounded-full px-3 py-1 font-mono text-xs">
-                  {filteredStaff.length} Accounts
+                  {filteredStaff?.length ?? 0} Accounts
                 </Badge>
               </div>
             </CardHeader>
@@ -579,7 +538,7 @@ function AdminDashboardPage() {
                     filteredStaff.map((staff) => (
                       <TableRow key={staff.id} className="hover:bg-muted/20 transition-colors">
                         <TableCell className="font-semibold text-foreground">
-                          {staff.display_name || "—"}
+                          {staff.displayName || "—"}
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {staff.username}
@@ -593,41 +552,45 @@ function AdminDashboardPage() {
                           <Badge
                             className={cn(
                               "border text-xs font-semibold rounded-full px-2.5 py-0.5",
-                              staff.is_active
+                              staff.isActive
                                 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                                 : "bg-destructive/10 text-destructive border-destructive/20"
                             )}
                           >
-                            {staff.is_active ? "Active" : "Inactive"}
+                            {staff.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            className={cn(
-                              "border text-xs font-semibold rounded-full px-2.5 py-0.5",
-                              staff.is_online
-                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                : "bg-slate-500/10 text-slate-600 border-slate-500/20"
-                            )}
-                          >
-                            {staff.is_online ? (
-                              <>
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1.5" />
-                                Online
-                              </>
-                            ) : (
-                              <>
-                                <span className="w-2 h-2 rounded-full bg-slate-400 mr-1.5" />
-                                Offline
-                              </>
-                            )}
-                          </Badge>
+                          {staff.role?.toLowerCase() === "doctor" ? (
+                            <Badge
+                              className={cn(
+                                "border text-xs font-semibold rounded-full px-2.5 py-0.5",
+                                staff.isOnline
+                                  ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                  : "bg-slate-500/10 text-slate-600 border-slate-500/20"
+                              )}
+                            >
+                              {staff.isOnline ? (
+                                <>
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1.5" />
+                                  Online
+                                </>
+                              ) : (
+                                <>
+                                  <span className="w-2 h-2 rounded-full bg-slate-400 mr-1.5" />
+                                  Offline
+                                </>
+                              )}
+                            </Badge>
+                          ) : (
+                            <span className="text-slate-400 text-xs">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
-                          {formatDate(staff.created_at)}
+                          {formatDate(staff.createdAt)}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
-                          {formatDate(staff.last_seen)}
+                          {formatDate(staff.lastSeen)}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -673,11 +636,11 @@ function AdminDashboardPage() {
                               onClick={() => handleToggleStatus(staff)}
                               className={cn(
                                 "h-8 w-8 rounded-lg",
-                                staff.is_active
+                                staff.isActive
                                   ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                   : "text-emerald-600 hover:bg-emerald-500/10"
                               )}
-                              title={staff.is_active ? "Deactivate Account" : "Activate Account"}
+                              title={staff.isActive ? "Deactivate Account" : "Activate Account"}
                             >
                               <Power className="h-4 w-4" />
                             </Button>
@@ -706,7 +669,7 @@ function AdminDashboardPage() {
                 <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-xl">
                   <div>
                     <Label className="text-xs text-muted-foreground">Full Name</Label>
-                    <p className="font-semibold text-sm mt-0.5">{selectedStaff.display_name || "—"}</p>
+                    <p className="font-semibold text-sm mt-0.5">{selectedStaff.displayName || "—"}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Username</Label>
@@ -729,12 +692,12 @@ function AdminDashboardPage() {
                       <Badge
                         className={cn(
                           "border text-xs font-semibold rounded-full px-2.5 py-0.5",
-                          selectedStaff.is_active
+                          selectedStaff.isActive
                             ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                             : "bg-destructive/10 text-destructive border-destructive/20"
                         )}
                       >
-                        {selectedStaff.is_active ? "Active" : "Inactive"}
+                        {selectedStaff.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </div>
                   </div>
@@ -745,13 +708,13 @@ function AdminDashboardPage() {
                     <Label className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3 w-3" /> Created
                     </Label>
-                    <p className="text-xs font-medium mt-1">{formatDate(selectedStaff.created_at)}</p>
+                    <p className="text-xs font-medium mt-1">{formatDate(selectedStaff.createdAt)}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3 w-3" /> Last Seen
                     </Label>
-                    <p className="text-xs font-medium mt-1">{formatDate(selectedStaff.last_seen)}</p>
+                    <p className="text-xs font-medium mt-1">{formatDate(selectedStaff.lastSeen)}</p>
                   </div>
                 </div>
               </div>
@@ -768,7 +731,7 @@ function AdminDashboardPage() {
                 Edit Staff Account
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Update account parameters for {selectedStaff?.display_name || selectedStaff?.username}
+                Update account parameters for {selectedStaff?.displayName || selectedStaff?.username}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
@@ -854,7 +817,7 @@ function AdminDashboardPage() {
                 Reset Password
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Enter a new password for {selectedStaff?.display_name || selectedStaff?.username}
+                Enter a new password for {selectedStaff?.displayName || selectedStaff?.username}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
@@ -909,12 +872,12 @@ function AdminDashboardPage() {
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2 font-display">
                 <Power className="h-5 w-5 text-primary" />
-                {selectedStaff?.is_active ? "Deactivate" : "Activate"} Staff Account
+                {selectedStaff?.isActive ? "Deactivate" : "Activate"} Staff Account
               </AlertDialogTitle>
               <AlertDialogDescription className="text-xs text-muted-foreground mt-2">
-                Are you sure you want to {selectedStaff?.is_active ? "deactivate" : "activate"} the account for{" "}
-                <span className="font-semibold text-foreground">{selectedStaff?.display_name || selectedStaff?.username}</span>?
-                {selectedStaff?.is_active &&
+                Are you sure you want to {selectedStaff?.isActive ? "deactivate" : "activate"} the account for{" "}
+                <span className="font-semibold text-foreground">{selectedStaff?.displayName || selectedStaff?.username}</span>?
+                {selectedStaff?.isActive &&
                   " Inactive users are immediately blocked from logging into the portal."}
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -925,14 +888,14 @@ function AdminDashboardPage() {
                 disabled={formLoading}
                 className={cn(
                   "rounded-xl text-xs font-semibold",
-                  selectedStaff?.is_active ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "bg-emerald-600 text-white hover:bg-emerald-700"
+                  selectedStaff?.isActive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "bg-emerald-600 text-white hover:bg-emerald-700"
                 )}
               >
                 {formLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...
                   </>
-                ) : selectedStaff?.is_active ? (
+                ) : selectedStaff?.isActive ? (
                   "Deactivate Account"
                 ) : (
                   "Activate Account"
@@ -952,7 +915,7 @@ function AdminDashboardPage() {
               </AlertDialogTitle>
               <AlertDialogDescription className="text-xs text-muted-foreground mt-2">
                 Are you sure you want to permanently delete the account for{" "}
-                <span className="font-semibold text-foreground">{selectedStaff?.display_name || selectedStaff?.username}</span>?
+                <span className="font-semibold text-foreground">{selectedStaff?.displayName || selectedStaff?.username}</span>?
                 This action cannot be undone and will remove all access for this staff member.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -980,7 +943,6 @@ function AdminDashboardPage() {
           isOpen={addStaffModalOpen}
           onClose={() => setAddStaffModalOpen(false)}
           onSuccess={fetchStaffAccounts}
-          callerRole={user?.role}
         />
       </StaffLayout>
     </StaffGuard>

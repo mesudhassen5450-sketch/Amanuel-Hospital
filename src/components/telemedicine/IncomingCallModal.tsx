@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -38,17 +38,39 @@ export function IncomingCallModal({
 }: IncomingCallModalProps) {
   const [isAccepting, setIsAccepting] = useState(false);
   const audioNotification = getAudioNotification();
+  const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopRingtone = () => {
+    if (ringtoneRef.current) {
+      ringtoneRef.current.pause();
+      ringtoneRef.current.currentTime = 0;
+    }
+    audioNotification.stop();
+    if (typeof document !== "undefined") {
+      document.querySelectorAll("audio").forEach((audio) => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+    }
+  };
 
   useEffect(() => {
     // Start continuous ringtone when modal opens
     if (open && appointment) {
+      if (typeof window !== "undefined" && !ringtoneRef.current) {
+        ringtoneRef.current = new Audio("/sounds/incoming-call.mp3");
+        ringtoneRef.current.loop = true;
+      }
+      if (ringtoneRef.current) {
+        ringtoneRef.current.play().catch((err) => console.log("Ringtone play error:", err));
+      }
       audioNotification.startRingtone();
     }
 
     // Stop ringtone when modal closes
     return () => {
       if (!open) {
-        audioNotification.stop();
+        stopRingtone();
       }
     };
   }, [open, appointment, audioNotification]);
@@ -58,7 +80,8 @@ export function IncomingCallModal({
 
     try {
       setIsAccepting(true);
-      audioNotification.stop();
+      // STOP THE SOUND IMMEDIATELY 🛑
+      stopRingtone();
 
       // Use appointmentId instead of id for the query
       const appointmentId = appointment.appointmentId || appointment.id;
@@ -91,6 +114,9 @@ export function IncomingCallModal({
     } catch (error) {
       console.error("Failed to accept call:", error);
       setIsAccepting(false);
+      if (ringtoneRef.current) {
+        ringtoneRef.current.play().catch(() => {});
+      }
       audioNotification.startRingtone(); // Restart ringtone on error
     }
   };
@@ -99,7 +125,8 @@ export function IncomingCallModal({
     if (!appointment) return;
 
     try {
-      audioNotification.stop();
+      // STOP THE SOUND IMMEDIATELY 🛑
+      stopRingtone();
 
       // Use appointmentId instead of id for the query
       const appointmentId = appointment.appointmentId || appointment.id;

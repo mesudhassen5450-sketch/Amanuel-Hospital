@@ -241,6 +241,26 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ========== CHAT MESSAGE HANDLER ==========
+  // Handle real-time chat messages
+  socket.on('send-message', (data) => {
+    console.log('[Socket.IO] ===== MESSAGE RECEIVED =====');
+    console.log('[Socket.IO] Message content:', data.message);
+    console.log('[Socket.IO] Sender:', data.sender_name, `(${data.sender_id})`);
+    console.log('[Socket.IO] Room ID:', data.room_id || data.roomId);
+    
+    // Support both roomId and room_id formats
+    const normalizedRoomId = normalizeRoomId(data.room_id || data.roomId);
+    console.log('[Socket.IO] Normalized Room ID:', normalizedRoomId);
+    
+    // Broadcast to everyone in the room INCLUDING sender (for multi-device support)
+    io.to(normalizedRoomId).emit('receive-message', data);
+    
+    console.log('[Socket.IO] Message broadcasted to room:', normalizedRoomId);
+    console.log('[Socket.IO] ===========================');
+  });
+  // ==========================================
+
   // Handle disconnect
   socket.on('disconnect', () => {
     console.log(`Client disconnected: ${socket.id}`);

@@ -12,16 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { createStaffAccount } from "@/lib/staff-server";
+import * as StaffAPI from "@/lib/api/staff-api";
 
 interface AddStaffModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  callerRole?: string;
 }
 
-export function AddStaffModal({ isOpen, onClose, onSuccess, callerRole }: AddStaffModalProps) {
+export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps) {
   const [formData, setFormData] = useState({
     displayName: "",
     username: "",
@@ -63,15 +62,12 @@ export function AddStaffModal({ isOpen, onClose, onSuccess, callerRole }: AddSta
 
     try {
       setLoading(true);
-      await createStaffAccount({
-        data: {
-          username: formData.username.trim(),
-          password: formData.password,
-          role: formData.role,
-          displayName: formData.displayName.trim(),
-          isActive: formData.isActive,
-          callerRole: callerRole,
-        },
+      await StaffAPI.createStaffAccount({
+        username: formData.username.trim(),
+        password: formData.password,
+        role: formData.role,
+        displayName: formData.displayName.trim(),
+        isActive: formData.isActive,
       });
       toast.success("Staff account created successfully");
       // Reset form

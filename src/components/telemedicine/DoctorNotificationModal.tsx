@@ -102,8 +102,20 @@ export function DoctorNotificationModal({ open, onOpenChange, request }: DoctorN
     return '';
   };
 
+  const stopAllAudio = () => {
+    if (typeof document !== "undefined") {
+      document.querySelectorAll("audio").forEach((audio) => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+    }
+  };
+
   const handleAccept = async () => {
     if (!request) return;
+
+    // STOP THE SOUND IMMEDIATELY 🛑
+    stopAllAudio();
 
     const targetAptId = getAppointmentId(request);
     if (!targetAptId) {
@@ -139,6 +151,9 @@ export function DoctorNotificationModal({ open, onOpenChange, request }: DoctorN
 
   const handleDecline = async () => {
     if (!request) return;
+
+    // STOP THE SOUND IMMEDIATELY 🛑
+    stopAllAudio();
 
     const targetAptId = getAppointmentId(request);
     if (!targetAptId) {

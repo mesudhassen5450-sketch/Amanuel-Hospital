@@ -1,0 +1,425 @@
+// Dr. Amanuel Hospital Management System - Production Prisma Schema
+// Contains the complete 17-table PostgreSQL schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters", "multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["public", "auth"]
+}
+
+// Auth Schema - Supabase managed (read-only)
+model User {
+  id        String   @id @default(uuid())
+  email     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("users")
+  @@schema("auth")
+  @@ignore
+}
+
+// 1. Staff Accounts
+model StaffAccount {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
+  passwordHash String    @map("password_hash")
+  role         String
+  displayName  String?   @map("display_name")
+  isActive     Boolean   @default(true) @map("is_active")
+  isOnline     Boolean   @default(false) @map("is_online")
+  lastSeen     DateTime? @map("last_seen")
+  lastLogin    DateTime? @map("last_login")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  doctor        Doctor?
+  consultations Consultation[]
+  dispenseLogs  DispenseLog[]
+
+  @@index([username])
+  @@schema("public")
+  @@map("staff_accounts")
+}
+// 2. Patients
+model Patient {
+  id               String    @id @default(uuid())
+  mrn              String    @unique
+  fullName         String    @map("full_name")
+  gender           String?   // Optional for existing records
+  dateOfBirth      DateTime? @map("date_of_birth")
+  age              Int?
+  phoneNumber      String?   @map("phone_number")
+  email            String?
+  address          String?
+  emergencyContact String?   @map("emergency_contact")
+  bloodGroup       String?   @map("blood_group")
+  allergies        String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  appointments  Appointment[]
+  consultations Consultation[]
+  prescriptions Prescription[]
+  labRequests   LabRequest[]
+  payments      Payment[]
+
+  @@index([mrn])
+  @@index([phoneNumber])
+  @@schema("public")
+  @@map("patients")
+}
+
+// 3. Appointments
+model Appointment {
+  id               String    @id @default(uuid())
+  patientId        String?   @map("patient_id")
+  patientName      String    @map("patient_name")
+  phoneNumber      String?   @map("phone_number")
+  doctorId         String?   @map("doctor_id")
+  doctorUsername   String?   @map("doctor_username")
+  doctorName       String?   @map("doctor_name")
+  departmentId     String?   @map("department_id")
+  appointmentDate DateTime  @map("appointment_date")
+  timeSlot         String?   @map("time_slot")
+  reasonForVisit   String?   @map("reason_for_visit")
+  status           String    @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+  bookingStatus    String    @default("pending") @map("booking_status")
+  paymentStatus    String    @default("unpaid") @map("payment_status")
+  callStatus       String    @default("IDLE") @map("call_status")
+  visitStatus      String    @default("waiting") @map("visit_status")
+  amount           Float     @default(100)
+  paidAt           DateTime? @map("paid_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  patient              Patient?              @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  doctor               Doctor?               @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  department           Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  consultations        Consultation[]
+  consultationMessages ConsultationMessage[]
+  calls                Call[]
+  payments             Payment[]
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+  @@schema("public")
+  @@map("appointments")
+}
+
+// 4. Consultations
+model Consultation {
+  id             String    @id @default(uuid())
+  appointmentId String?   @map("appointment_id")
+  patientId      String    @map("patient_id")
+  doctorId       String?   @map("doctor_id") // Optional for existing records
+  doctorUsername String?   @map("doctor_username")
+  chiefComplaint String?   @map("chief_complaint")
+  diagnosis      String?
+  symptoms       String?
+  notes          String?
+  status         String    @default("IN_PROGRESS")
+  startedAt      DateTime  @default(now()) @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  appointment  Appointment?       @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  patient      Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor       StaffAccount?      @relation(fields: [doctorId], references: [username], onDelete: Cascade)
+  notesList    ConsultationNote[]
+  labRequests  LabRequest[]
+  prescriptions Prescription[]
+
+  @@index([patientId])
+  @@index([appointmentId])
+  @@schema("public")
+  @@map("consultations")
+}
+
+// 5. Consultation Notes
+model ConsultationNote {
+  id             String   @id @default(uuid())
+  consultationId String   @map("consultation_id")
+  doctorUsername String   @map("doctor_username")
+  noteType       String   @default("CLINICAL") @map("note_type") // CLINICAL, DIAGNOSIS, FOLLOWUP
+  content        String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  consultation Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+
+  @@index([consultationId])
+  @@schema("public")
+  @@map("consultation_notes")
+}
+
+// 6. Consultation Messages (Real-Time Video Call Chat)
+model ConsultationMessage {
+  id            String   @id @default(uuid())
+  appointmentId String   @map("appointment_id")
+  roomId        String   @map("room_id")
+  senderId      String   @map("sender_id")
+  senderName    String   @map("sender_name")
+  senderRole    String   @map("sender_role") // 'doctor' | 'patient'
+  message       String
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@index([roomId])
+  @@schema("public")
+  @@map("consultation_messages")
+}
+
+// 7. Calls (Video Call Signaling & Room Logs)
+model Call {
+  id             String    @id @default(uuid())
+  appointmentId  String    @map("appointment_id")
+  roomId         String    @map("room_id")
+  doctorUsername String    @map("doctor_username")
+  patientId      String?   @map("patient_id")
+  patientName    String?   @map("patient_name")
+  status         String    @default("calling") // calling, accepted, declined, ended
+  startedAt      DateTime  @default(now()) @map("started_at")
+  endedAt        DateTime? @map("ended_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@index([doctorUsername])
+  @@schema("public")
+  @@map("calls")
+}
+
+// 8. Lab Requests
+model LabRequest {
+  id             String    @id @default(uuid())
+  patientId      String    @map("patient_id")
+  consultationId String?   @map("consultation_id")
+  requestedBy    String?   @map("requested_by") // Doctor username (optional)
+  testType       String?   @map("test_type") // Optional for existing records
+  testCategory   String?   @map("test_category")
+  priority       String    @default("ROUTINE") // ROUTINE, URGENT, STAT
+  status         String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+  notes          String?
+  requestedAt    DateTime  @default(now()) @map("requested_at")
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  patient      Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  consultation Consultation? @relation(fields: [consultationId], references: [id], onDelete: SetNull)
+  labResults   LabResult[]
+
+  @@index([patientId])
+  @@index([status])
+  @@schema("public")
+  @@map("lab_requests")
+}
+
+// 9. Lab Results
+model LabResult {
+  id             String   @id @default(uuid())
+  labRequestId   String   @map("lab_request_id")
+  testedBy       String?  @map("tested_by") // Lab technician username (optional)
+  parameterName  String?  @map("parameter_name") // Optional for existing records
+  resultValue    String   @map("result_value")
+  unit           String?
+  referenceRange String?  @map("reference_range")
+  isAbnormal     Boolean  @default(false) @map("is_abnormal")
+  remarks        String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  labRequest LabRequest @relation(fields: [labRequestId], references: [id], onDelete: Cascade)
+
+  @@index([labRequestId])
+  @@schema("public")
+  @@map("lab_results")
+}
+
+// 10. Medicines (Pharmacy Inventory)
+model Medicine {
+  id          String    @id @default(uuid())
+  code        String?   @unique // Optional for existing records
+  name        String
+  genericName String?   @map("generic_name")
+  category    String?
+  dosage      String?
+  quantity    Int       @default(0)
+  minQuantity Int       @default(10) @map("min_quantity")
+  unitPrice   Float?    @map("unit_price") // Optional for existing records
+  expiryDate  DateTime? @map("expiry_date")
+  isAvailable Boolean   @default(true) @map("is_available")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  prescriptionItems PrescriptionItem[]
+  dispenseLogs      DispenseLog[]
+
+  @@index([code])
+  @@index([name])
+  @@schema("public")
+  @@map("medicines")
+}
+
+// 11. Prescriptions
+model Prescription {
+  id             String   @id @default(uuid())
+  patientId      String   @map("patient_id")
+  consultationId String?  @map("consultation_id")
+  prescribedBy   String?  @map("prescribed_by") // Doctor username (optional for existing records)
+  status         String   @default("PENDING") // PENDING, DISPENSED, CANCELLED
+  instructions   String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  patient      Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  consultation Consultation?      @relation(fields: [consultationId], references: [id], onDelete: SetNull)
+  items        PrescriptionItem[]
+  dispenseLogs DispenseLog[]
+
+  @@index([patientId])
+  @@index([status])
+  @@schema("public")
+  @@map("prescriptions")
+}
+
+// 12. Prescription Items
+model PrescriptionItem {
+  id             String @id @default(uuid())
+  prescriptionId String @map("prescription_id")
+  medicineId     String? @map("medicine_id") // Optional for existing records
+  dosage         String
+  frequency      String
+  duration       String
+  quantity       Int
+  notes          String?
+
+  // Relations
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medicine     Medicine?    @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
+  @@schema("public")
+  @@map("prescription_items")
+}
+
+// 13. Dispense Logs
+model DispenseLog {
+  id             String   @id @default(uuid())
+  prescriptionId String   @map("prescription_id")
+  medicineId     String?  @map("medicine_id") // Optional for existing records
+  dispensedBy    String?  @map("dispensed_by") // Pharmacist username (optional)
+  quantity       Int?     // Optional for existing records
+  totalPrice     Float?   @map("total_price") // Optional for existing records
+  dispensedAt    DateTime @default(now()) @map("dispensed_at")
+
+  // Relations
+  prescription Prescription  @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medicine     Medicine?     @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  pharmacist   StaffAccount? @relation(fields: [dispensedBy], references: [username], onDelete: Cascade)
+
+  @@index([prescriptionId])
+  @@schema("public")
+  @@map("dispense_log")
+}
+
+// 14. Payments
+model Payment {
+  id            String    @id @default(uuid())
+  appointmentId String?   @map("appointment_id")
+  patientId     String?   @map("patient_id")
+  amount        Float
+  paymentMethod String    @default("CASH") @map("payment_method") // CASH, TELEBIRR, CBE_BIRR, CARD
+  status        String    @default("PAID") // PAID, PENDING, REFUNDED
+  processedBy   String?   @map("processed_by") // Cashier username
+  receiptNumber String?   @unique @map("receipt_number")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  patient     Patient?     @relation(fields: [patientId], references: [id], onDelete: SetNull)
+
+  @@index([appointmentId])
+  @@index([patientId])
+  @@schema("public")
+  @@map("payments")
+}
+
+// 15. Push Subscriptions (Web Push Notifications)
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  userRole  String   @map("user_role")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@schema("public")
+  @@map("push_subscriptions")
+}
+
+// 16. Doctors
+model Doctor {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  departmentId String?   @map("department_id")
+  specialty    String
+  experience   String?
+  bio          String?
+  isAvailable  Boolean   @default(true) @map("is_available")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  staffAccount StaffAccount @relation(fields: [username], references: [username], onDelete: Cascade)
+  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  appointments Appointment[]
+
+  @@index([username])
+  @@schema("public")
+  @@map("doctors")
+}
+
+// 17. Departments
+model Department {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  doctors      Doctor[]
+  appointments Appointment[]
+  @@schema("public")
+  @@map("departments")
+}
+
+
+
+

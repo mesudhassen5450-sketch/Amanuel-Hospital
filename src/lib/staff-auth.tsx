@@ -82,6 +82,7 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
 
   // Expire session and redirect
   const expireSession = useCallback(() => {
+    localStorage.removeItem('token'); // Clear JWT token
     clearSession();
     setUser(null);
     window.location.replace("/staff/login");
@@ -167,16 +168,26 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
   // ── Login ─────────────────────────────────────────────────────────────────
   const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { validateStaffLogin, updateDoctorOnlineStatus } = await import("./staff-server");
-      const result = await validateStaffLogin({ data: { username, password } });
+      // Call Express backend /api/auth/login endpoint
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
 
-      if (result.success && result.username && result.role) {
+      const result = await response.json();
+
+      if (response.ok && result.success && result.token && result.user) {
+        // Save JWT token to localStorage for API calls
+        localStorage.setItem('token', result.token);
+
         const now = Date.now();
-        const normalizedRole = (result.role as string).toLowerCase() as StaffRole;
+        const normalizedRole = (result.user.role as string).toLowerCase() as StaffRole;
         const session: SessionData = {
-          username:    result.username,
+          username:    result.user.username,
           role:        normalizedRole,
-          displayName: result.display_name ?? result.username,
+          displayName: result.user.displayName ?? result.user.username,
           loginAt:     now,
           expiresAt:   now + SESSION_MAX_MS,
           lastActive:  now,
@@ -187,8 +198,9 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
         // Set doctor online status if logging in as doctor
         if (normalizedRole === "doctor") {
           try {
+            const { updateDoctorOnlineStatus } = await import("./staff-server");
             await updateDoctorOnlineStatus({
-              data: { username: result.username, isOnline: true, callerRole: normalizedRole || undefined },
+              data: { username: result.user.username, isOnline: true, callerRole: normalizedRole || undefined },
             });
           } catch (err) {
             console.error("Failed to update doctor online status on login:", err);
@@ -198,7 +210,7 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
         return { success: true };
       }
 
-      return { success: false, error: result.error ?? "Invalid username or password." };
+      return { success: false, error: result.message || "Invalid username or password." };
     } catch (err: any) {
       console.error("Authentication error:", err?.message);
       return { success: false, error: "Authentication service is unavailable. Please try again." };
@@ -219,6 +231,9 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // Clear JWT token from localStorage
+    localStorage.removeItem('token');
+    
     clearSession();
     setUser(null);
     // Replace history so back-button cannot return to protected page

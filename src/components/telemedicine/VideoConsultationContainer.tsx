@@ -1,3 +1,4 @@
+import { getAudioNotification } from "@/lib/audio-utils";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,9 @@ export function VideoConsultationContainer({
   isDoctor = false,
 }: VideoConsultationContainerProps) {
   const [hasJoinedCall, setHasJoinedCall] = useState(false);
+
+  // Audio notification instance to stop ringtones when connecting
+  const audioNotification = getAudioNotification();
 
   // Navigation for role-based routing after call ends
   const navigate = useNavigate();
@@ -97,9 +101,10 @@ export function VideoConsultationContainer({
     }
   }, [remoteStream]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - stop ringtones and disconnect
   useEffect(() => {
     return () => {
+      audioNotification.stop(); // Stop any playing ringtones on unmount
       disconnectWebRTC();
     };
   }, [disconnectWebRTC]);
@@ -125,6 +130,9 @@ export function VideoConsultationContainer({
       return;
     }
 
+    // CRITICAL: Stop any playing ringtones when user joins call
+    audioNotification.stop();
+    
     // Set joined call state - WebRTC hook will handle the actual connection
     setHasJoinedCall(true);
   };

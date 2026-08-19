@@ -133,7 +133,7 @@ export const createInvoiceAndInitializePayment = async (req: Request, res: Respo
       body: JSON.stringify(chapaPayload),
     });
 
-    const chapaData = await chapaResponse.json();
+    const chapaData: any = await chapaResponse.json();
 
     if (!chapaResponse.ok || chapaData.status !== 'success') {
       // Delete the invoice if Chapa initialization fails
@@ -172,7 +172,9 @@ export const createInvoiceAndInitializePayment = async (req: Request, res: Respo
  */
 export const verifyPayment = async (req: Request, res: Response) => {
   try {
-    const { txRef } = req.params;
+    const txRef = Array.isArray(req.params.txRef) 
+      ? req.params.txRef[0] 
+      : req.params.txRef;
 
     if (!txRef) {
       return res.status(400).json({ error: 'Transaction reference is required' });
@@ -216,7 +218,7 @@ export const verifyPayment = async (req: Request, res: Response) => {
       }
     );
 
-    const chapaData = await chapaResponse.json();
+    const chapaData: any = await chapaResponse.json();
 
     if (!chapaResponse.ok) {
       console.error('[Payment Controller] Chapa verification failed:', chapaData);
@@ -283,7 +285,9 @@ export const verifyPayment = async (req: Request, res: Response) => {
  */
 export const handleWebhook = async (req: Request, res: Response) => {
   try {
-    const signature = req.headers['x-chapa-signature'] as string;
+    const signature = Array.isArray(req.headers['x-chapa-signature'])
+      ? req.headers['x-chapa-signature'][0]
+      : req.headers['x-chapa-signature'] as string;
     const payload = JSON.stringify(req.body);
 
     // Verify webhook signature
@@ -351,7 +355,9 @@ export const handleWebhook = async (req: Request, res: Response) => {
  */
 export const getInvoiceByTxRef = async (req: Request, res: Response) => {
   try {
-    const { txRef } = req.params;
+    const txRef = Array.isArray(req.params.txRef) 
+      ? req.params.txRef[0] 
+      : req.params.txRef;
 
     const invoice = await prisma.invoice.findUnique({
       where: { txRef },
@@ -390,7 +396,9 @@ export const getInvoiceByTxRef = async (req: Request, res: Response) => {
  */
 export const getPatientInvoices = async (req: Request, res: Response) => {
   try {
-    const { patientId } = req.params;
+    const patientId = Array.isArray(req.params.patientId) 
+      ? req.params.patientId[0] 
+      : req.params.patientId;
 
     const invoices = await prisma.invoice.findMany({
       where: { patientId: BigInt(patientId) },

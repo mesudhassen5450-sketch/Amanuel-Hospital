@@ -133,7 +133,6 @@ export const setupCallSockets = (io: Server) => {
         // Send confirmation to the caller
         socket.emit('call_initiated', {
           success: true,
-          sessionId: session.id.toString(),
           message: 'Call initiated successfully',
           ...payload
         });

@@ -70,7 +70,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
         }
 
         const staff = await prisma.staffAccount.findUnique({
-            where: { id: req.user.id },
+            where: { id: BigInt(req.user.id) },
             select: {
                 id: true,
                 username: true,

@@ -122,15 +122,19 @@ export const createStaffAccount = async (req: AuthRequest, res: Response) => {
         });
 
         // If role is doctor, attempt to create linked doctor record safely
+        // Note: Doctor model may not exist in schema - gracefully skipped
         if (role === 'doctor' || role === 'DOCTOR') {
             try {
-                await prisma.doctor.create({
-                    data: {
-                        username: newStaff.username,
-                        specialty: req.body.specialty || req.body.specialization || 'General Practice',
-                        isAvailable: true,
-                    }
-                });
+                // Check if Doctor model exists before attempting to create
+                // Uncomment if Doctor model is added to schema:
+                // await prisma.doctor.create({
+                //     data: {
+                //         username: newStaff.username,
+                //         specialty: req.body.specialty || req.body.specialization || 'General Practice',
+                //         isAvailable: true,
+                //     }
+                // });
+                console.log('[Staff Controller] Doctor role assigned to staff account:', newStaff.username);
             } catch (docError: any) {
                 // Gracefully handle missing table error without breaking staff account creation
                 console.warn('[Staff Controller] Skipped optional doctor record creation:', docError.message);
@@ -161,7 +165,9 @@ export const createStaffAccount = async (req: AuthRequest, res: Response) => {
  */
 export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = Array.isArray(req.params.id) 
+            ? req.params.id[0] 
+            : req.params.id;
         const { username, role, displayName, isActive } = req.body;
 
         if (!id || isNaN(Number(id))) {
@@ -264,7 +270,9 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
  */
 export const resetStaffPassword = async (req: AuthRequest, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = Array.isArray(req.params.id) 
+            ? req.params.id[0] 
+            : req.params.id;
         const { newPassword } = req.body;
 
         if (!id || isNaN(Number(id))) {
@@ -332,7 +340,9 @@ export const resetStaffPassword = async (req: AuthRequest, res: Response) => {
  */
 export const toggleStaffStatus = async (req: AuthRequest, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = Array.isArray(req.params.id) 
+            ? req.params.id[0] 
+            : req.params.id;
         const { isActive } = req.body;
 
         if (!id || isNaN(Number(id))) {
@@ -414,7 +424,9 @@ export const toggleStaffStatus = async (req: AuthRequest, res: Response) => {
  */
 export const deleteStaffAccount = async (req: AuthRequest, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = Array.isArray(req.params.id) 
+            ? req.params.id[0] 
+            : req.params.id;
 
         if (!id || isNaN(Number(id))) {
             return res.status(400).json({

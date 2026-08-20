@@ -44,10 +44,10 @@ export interface ActiveCallsResponse {
 
 /**
  * Initialize Socket.IO connection with JWT authentication
- * @param token JWT token from authentication
+ * @param token JWT token from authentication (optional for patient connections)
  * @returns Socket instance
  */
-export const initializeSocket = (token: string): Socket => {
+export const initializeSocket = (token?: string): Socket => {
   if (socket?.connected) {
     console.log('[Socket Client] Already connected, reusing existing socket');
     return socket;
@@ -55,9 +55,15 @@ export const initializeSocket = (token: string): Socket => {
 
   console.log('[Socket Client] Initializing Socket.IO connection...');
 
+  // Get token from parameter or localStorage (for staff auth)
+  const authToken = token || localStorage.getItem('token') || localStorage.getItem('auth_token');
+
   socket = io(BACKEND_URL, {
     auth: {
-      token, // JWT token for authentication
+      token: authToken || '', // JWT token for authentication (optional for consultation rooms)
+    },
+    query: {
+      token: authToken || '', // Fallback token in query params
     },
     transports: ['websocket', 'polling'],
     reconnection: true,

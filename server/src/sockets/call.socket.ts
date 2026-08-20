@@ -34,19 +34,23 @@ export const setupCallSockets = (io: Server) => {
   console.log('[Socket.IO] Setting up call socket handlers...');
 
   // JWT Authentication Middleware for WebSocket connections
+  // Allow unauthenticated connections for consultation room WebRTC signaling
   io.use((socket: AuthenticatedSocket, next) => {
     try {
-      // Extract token from auth object or authorization header
+      // Extract token from auth object, query params, or authorization header
       const token = 
         socket.handshake.auth.token || 
+        socket.handshake.query.token as string ||
         socket.handshake.headers.authorization?.split(' ')[1];
 
       if (!token) {
-        console.error('[Socket.IO] Authentication failed: No token provided');
-        return next(new Error('Authentication error: Token missing'));
+        // Allow connection without authentication for consultation room WebRTC signaling
+        // Patients joining video consultations don't need JWT authentication
+        console.log('[Socket.IO] Anonymous connection allowed (consultation room)');
+        return next();
       }
 
-      // Verify JWT token
+      // Verify JWT token if provided
       const jwtSecret = process.env.JWT_SECRET || 'amanuel_hospital_secure_jwt_secret_2026_key';
       const decoded = jwt.verify(token, jwtSecret) as { 
         id: string; 
@@ -59,8 +63,9 @@ export const setupCallSockets = (io: Server) => {
       console.log(`[Socket.IO] User authenticated: ${decoded.username} (${decoded.role})`);
       next();
     } catch (err: any) {
-      console.error('[Socket.IO] Authentication error:', err.message);
-      next(new Error('Authentication error: Invalid token'));
+      // If token verification fails, still allow connection for consultation rooms
+      console.warn('[Socket.IO] Token verification failed, allowing anonymous connection:', err.message);
+      next();
     }
   });
 

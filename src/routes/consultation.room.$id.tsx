@@ -140,12 +140,21 @@ function ConsultationRoomPage() {
     
     console.log('[Chat] Initializing Socket.IO connection for room:', roomId);
     
-    // Initialize Socket.IO connection
+    // Initialize Socket.IO connection with optional authentication
     const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001';
     console.log('[Chat] Connecting to backend URL:', backendUrl);
     
+    // Get authentication token if available (for staff users)
+    const authToken = localStorage.getItem('token') || localStorage.getItem('auth_token');
+    
     socketRef.current = io(backendUrl, {
       transports: ['websocket', 'polling'],
+      auth: {
+        token: authToken || '', // Optional token for authenticated users
+      },
+      query: {
+        token: authToken || '', // Fallback in query params
+      },
     });
 
     // Handle successful connection

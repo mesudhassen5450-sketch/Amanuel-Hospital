@@ -70,19 +70,40 @@ export function useWebRTCSocket({
 
   useEffect(() => {
     const fetchIceServers = async () => {
+      const defaultIceServers = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+      ];
+
       try {
         // Use environment variable with fallback - ensure production URL is used
         const baseUrl = signalingServerUrl === 'http://localhost:3001' 
           ? (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || signalingServerUrl)
           : signalingServerUrl;
         
+        console.log('[WebRTC] Fetching ICE servers from:', `${baseUrl}/api/webrtc/ice-servers`);
+        
         const response = await fetch(`${baseUrl}/api/webrtc/ice-servers`);
-        const data = await response.json();
-        if (data.iceServers && data.iceServers.length > 0) {
-          setIceServers(data.iceServers);
+        
+        // Validate response content-type before parsing JSON
+        const contentType = response.headers.get('content-type');
+        
+        if (response.ok && contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          if (data.iceServers && data.iceServers.length > 0) {
+            console.log('[WebRTC] Using custom ICE servers:', data.iceServers.length);
+            setIceServers(data.iceServers);
+            return;
+          }
+        } else {
+          console.warn('[WebRTC] Invalid response from ICE servers endpoint, using defaults');
         }
+        
+        // Fallback to default STUN servers
+        setIceServers(defaultIceServers);
       } catch (err) {
-        console.warn('Using default STUN servers:', err);
+        console.warn('[WebRTC] Failed to fetch ICE servers, using defaults:', err);
+        setIceServers(defaultIceServers);
       }
     };
     fetchIceServers();
@@ -457,10 +478,19 @@ export function useWebRTCSocket({
         await initializeLocalStream();
         createPeerConnection();
 
+        // Get authentication token if available (for staff users)
+        const authToken = localStorage.getItem('token') || localStorage.getItem('auth_token');
+        
         const socket = io(signalingServerUrl, {
           transports: ['websocket', 'polling'],
           reconnection: true,
           reconnectionAttempts: 3,
+          auth: {
+            token: authToken || '', // Optional token for authenticated users
+          },
+          query: {
+            token: authToken || '', // Fallback in query params
+          },
         });
 
         socketRef.current = socket;

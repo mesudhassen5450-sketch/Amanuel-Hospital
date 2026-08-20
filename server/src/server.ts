@@ -65,6 +65,19 @@ app.use("/api/staff", staffRoutes);
 // Payment Processing Routes
 app.use("/api/payments", paymentRoutes);
 
+// WebRTC ICE Servers Endpoint
+app.get("/api/webrtc/ice-servers", (req, res) => {
+  // Return STUN servers for WebRTC connections
+  // In production, you can add TURN servers here for better connectivity
+  const iceServers = [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+  ];
+
+  res.json({ iceServers });
+});
+
 app.get("/", (req, res) => {
   res.json({
     name: "Dr. Amanuel Hospital Backend Server",

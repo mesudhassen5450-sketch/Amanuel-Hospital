@@ -10,4 +10,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    // Disable Web Locks API to prevent Navigator LockManager errors in Firefox
+    // @ts-ignore - Supabase types don't correctly reflect that false is valid
+    lock: false,
+  },
+});

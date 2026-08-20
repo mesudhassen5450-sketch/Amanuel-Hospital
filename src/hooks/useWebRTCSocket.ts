@@ -71,7 +71,12 @@ export function useWebRTCSocket({
   useEffect(() => {
     const fetchIceServers = async () => {
       try {
-        const response = await fetch(`${signalingServerUrl}/api/webrtc/ice-servers`);
+        // Use environment variable with fallback - ensure production URL is used
+        const baseUrl = signalingServerUrl === 'http://localhost:3001' 
+          ? (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || signalingServerUrl)
+          : signalingServerUrl;
+        
+        const response = await fetch(`${baseUrl}/api/webrtc/ice-servers`);
         const data = await response.json();
         if (data.iceServers && data.iceServers.length > 0) {
           setIceServers(data.iceServers);

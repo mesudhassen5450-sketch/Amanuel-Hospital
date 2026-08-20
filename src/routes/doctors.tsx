@@ -50,7 +50,7 @@ function DoctorsPage() {
       ...doc,
       specialty: translation?.specialty || doc.specialty || 'General Physician',
       experience: translation?.experience || `${doc.experience}+ years experience`,
-      availableToday: translation?.availableToday ?? true,
+      availableToday: doc.is_online ?? true, // Use database field instead
     };
   });
 

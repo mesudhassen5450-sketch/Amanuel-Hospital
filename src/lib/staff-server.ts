@@ -12,6 +12,19 @@ function getSupabase() {
   return createClient(url, key);
 }
 
+// ── Helper functions for data normalization ────────────────────────────────────
+function normaliseMethod(method: string | null): string {
+  if (!method) return "Unknown";
+  return method.charAt(0).toUpperCase() + method.slice(1).toLowerCase();
+}
+
+function normaliseStatus(bookingStatus: string | null, paymentStatus: string | null): string {
+  if (paymentStatus === "paid") return "Confirmed";
+  if (bookingStatus === "confirmed") return "Confirmed";
+  if (bookingStatus === "pending") return "Pending";
+  return "Unknown";
+}
+
 // ── Server-side role authorization ────────────────────────────────────────────
 // callerRole is sent from the client session — validated here server-side.
 // This prevents cross-role API abuse even if a user bypasses the frontend guard.

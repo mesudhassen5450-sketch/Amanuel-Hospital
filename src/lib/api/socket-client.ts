@@ -3,8 +3,10 @@ import { io, Socket } from 'socket.io-client';
 // Socket.IO client instance
 let socket: Socket | null = null;
 
-// Backend URL from environment variables
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+// Backend URL from environment variables (prioritize VITE_BACKEND_URL for WebSocket connections)
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+console.log('[Socket Client] Backend URL configured:', BACKEND_URL);
 
 /**
  * Event payload interfaces matching the backend

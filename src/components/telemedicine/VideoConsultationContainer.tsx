@@ -82,7 +82,7 @@ export function VideoConsultationContainer({
     isAudioEnabled,
     isVideoEnabled,
   } = useWebRTCSocket({
-    signalingServerUrl: 'http://localhost:3001',
+    signalingServerUrl: import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001',
     appointmentId,
     userId,
     userRole: userRole as 'doctor' | 'patient',

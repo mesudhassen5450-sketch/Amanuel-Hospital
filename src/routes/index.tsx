@@ -223,14 +223,14 @@ function DoctorsPreview() {
           {/* Technical CTA strip */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 sharp-card bg-card border rounded-xl">
             <div>
-              <h4 className="font-display font-semibold">{t(tr.allDoctors, lang)}</h4>
+              <h4 className="font-display font-semibold">All Doctors</h4>
               <p className="text-sm text-muted-foreground mono-technical">
                 View complete medical staff directory
               </p>
             </div>
             <Button asChild className="rounded-xl precise-button">
               <Link to="/doctors">
-                {t(tr.viewAll, lang)} <ArrowRight className="ml-2 h-4 w-4" />
+                View All <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>

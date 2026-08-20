@@ -79,7 +79,7 @@ function ConsultationRoomPage() {
     isAudioEnabled,
     isVideoEnabled,
   } = useWebRTCSocket({
-    signalingServerUrl: 'http://localhost:3001',
+    signalingServerUrl: import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001',
     appointmentId: id,
     userId,
     userRole: userRole as 'doctor' | 'patient',
@@ -141,7 +141,10 @@ function ConsultationRoomPage() {
     console.log('[Chat] Initializing Socket.IO connection for room:', roomId);
     
     // Initialize Socket.IO connection
-    socketRef.current = io('http://localhost:3001', {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    console.log('[Chat] Connecting to backend URL:', backendUrl);
+    
+    socketRef.current = io(backendUrl, {
       transports: ['websocket', 'polling'],
     });
 

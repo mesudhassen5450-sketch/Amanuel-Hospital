@@ -296,7 +296,8 @@ export function useWebRTCSocket({
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      socketRef.current.emit('sdp-offer', {
+      console.log('[WebRTC] Sending offer to room:', normalizedRoomId);
+      socketRef.current.emit('offer', {
         roomId: normalizedRoomId,
         offer: pc.localDescription,
         senderId: socketRef.current.id,
@@ -342,7 +343,8 @@ export function useWebRTCSocket({
 
       await pc.setLocalDescription(answer);
 
-      socketRef.current.emit('sdp-answer', {
+      console.log('[WebRTC] Sending answer to room:', normalizedRoomId);
+      socketRef.current.emit('answer', {
         roomId: normalizedRoomId,
         answer: pc.localDescription,
         senderId: socketRef.current.id,
@@ -513,7 +515,7 @@ export function useWebRTCSocket({
           }
         });
 
-        socket.on('sdp-offer', async (data: any) => {
+        socket.on('offer', async (data: any) => {
           if (data.senderId === socket.id) return;
           // Patient accepts offer from Doctor
           if (!isDoctorRole) {
@@ -521,7 +523,7 @@ export function useWebRTCSocket({
           }
         });
 
-        socket.on('sdp-answer', async (data: any) => {
+        socket.on('answer', async (data: any) => {
           if (data.senderId === socket.id) return;
           if (isDoctorRole) {
             await handleAnswer(data.answer || data);

@@ -4,9 +4,8 @@
 
 ### *Modern Healthcare Platform for Digital Hospital Operations*
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Visit_Site-success?style=for-the-badge)](https://amanuelhospital.netlify.app/)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=for-the-badge&logo=github)](https://github.com/mesudhassen5450-sketch/Amanuel-Hospital)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](#-license)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Visit_Site-success?style=for-the-badge)](https://amanuelhospital.com.et/)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=for-the-badge&logo=github)](https://github.com/mesudhassen5070-skech/Amanuel-Hospital-Main2)
 
 ![Project Banner](scrren/aman.png)
 
@@ -432,7 +431,26 @@ CORS_ORIGIN=http://localhost:3000
 ### 🌐 Services Page
 ![Services](scrren/aman%202.png)
 
-*Additional screenshots available in `/scrren` directory*
+### 👨‍⚕️ Doctors Page
+![Doctors Page](public/scrrenshhots%20git%20hub/doctorspage.png)
+
+### 🔐 Staff Login
+![Staff Login](public/scrrenshhots%20git%20hub/staff%20login.png)
+
+### 📋 Reception Portal
+![Reception Portal](public/scrrenshhots%20git%20hub/reception%20portal.png)
+
+### 📊 Admin Dashboard - Page 1
+![Admin Dashboard 1](public/scrrenshhots%20git%20hub/adminpage1.png)
+
+### 📊 Admin Dashboard - Page 2
+![Admin Dashboard 2](public/scrrenshhots%20git%20hub/adminpage2.png)
+
+### 🩺 Doctor Dashboard
+![Doctor Dashboard](public/scrrenshhots%20git%20hub/doctordashboard%20(2).png)
+
+### 🎥 Video Call & Real-Time Messaging
+![Video Consultation](public/scrrenshhots%20git%20hub/video%20call%20and%20messge%20real%20time.jpg)
 
 </details>
 
@@ -497,16 +515,11 @@ This project was developed as part of the **Sof Omar Technologies Internship Pro
 
 ---
 
-## 📜 **License**
-
-This project is licensed under the **MIT License** - see the LICENSE file for details.
-
----
-
 ## 🙏 **Acknowledgments**
 
 Special thanks to:
 - **Sof Omar Technologies** for the internship opportunity
+- **Dr. Amanuel Hailemaryam** for his invaluable guidance and mentorship
 - **Dr. Amanuel Hospital** for the project inspiration
 - Open-source community for the amazing tools and libraries
 
@@ -516,7 +529,7 @@ Special thanks to:
 
 ### **Built with ❤️, curiosity, and continuous learning**
 
-[![Star this repo](https://img.shields.io/github/stars/mesudhassen5450-sketch/Amanuel-Hospital?style=social)](https://github.com/mesudhassen5450-sketch/Amanuel-Hospital)
+[![Star this repo](https://img.shields.io/github/stars/mesudhassen5070-skech/Amanuel-Hospital-Main2?style=social)](https://github.com/mesudhassen5070-skech/Amanuel-Hospital-Main2)
 
 **[⬆ Back to Top](#-dr-amanuel-hospital-management-system)**
 

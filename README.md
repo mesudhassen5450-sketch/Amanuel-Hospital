@@ -245,6 +245,13 @@ cd server && npm run dev  # Backend (Terminal 2)
    DATABASE_URL=your_database_url
    ```
 
+   **⚠️ IMPORTANT:** Set `VITE_API_URL` to your backend domain **WITHOUT** the `/api` suffix!
+   
+   ❌ **WRONG:** `VITE_API_URL=https://your-backend.onrender.com/api`  
+   ✅ **CORRECT:** `VITE_API_URL=https://your-backend.onrender.com`
+   
+   *The frontend code already appends `/api/...` to all endpoints, so adding `/api` to the base URL will cause 404 errors like `/api/api/auth/login`*
+
 4. **⚠️ CRITICAL:** After adding/changing environment variables, you MUST:
    - Go to **Deploys** tab
    - Click **Trigger deploy** → **Clear cache and deploy site**
@@ -281,12 +288,37 @@ cd server && npm run dev  # Backend (Terminal 2)
 
 <br>
 
+**Issue: 404 Not Found and "Unexpected token '<'" errors**
+
+This means the frontend is calling a wrong API path (e.g., `/api/api/auth/login` instead of `/api/auth/login`).
+
+✅ **Solution:**
+1. Open **Netlify Dashboard** → **Site configuration** → **Environment variables**
+2. Verify `VITE_API_URL` is set **WITHOUT** the `/api` suffix:
+   
+   ❌ **WRONG:** `VITE_API_URL=https://backend.onrender.com/api`  
+   ✅ **CORRECT:** `VITE_API_URL=https://backend.onrender.com`
+
+3. Go to **Deploys** tab → **Trigger deploy** → **Clear cache and deploy site**
+4. Test in **Incognito Window** at your domain (e.g., `https://amanuelhospital.com.et`)
+5. Try logging in with `admin` / `admin123`
+
+**Why this happens:** The frontend code already appends `/api/...` to all API calls:
+```typescript
+fetch(`${API_BASE_URL}/api/auth/login`)  // Already includes /api
+```
+If you set `VITE_API_URL=https://backend.com/api`, the final URL becomes `https://backend.com/api/api/auth/login` (404).
+
+---
+
 **Issue: Frontend still calls `localhost:3001` in production**
 
 ✅ **Solution:**
 1. Verify `VITE_API_URL` and `VITE_BACKEND_URL` are set in Netlify environment variables
 2. Click **Clear cache and deploy site** (Vite embeds env vars at build time!)
 3. Test in incognito mode to avoid browser caching
+
+---
 
 **Issue: CORS errors**
 
@@ -295,12 +327,16 @@ cd server && npm run dev  # Backend (Terminal 2)
 2. No trailing slashes in URLs
 3. Use `https://` not `http://` for production
 
+---
+
 **Issue: 401 Unauthorized errors**
 
 ✅ **Solution:**
 1. Check that `JWT_SECRET` is the same in all environments
 2. Clear browser localStorage and login again
 3. Verify backend is deployed and running
+
+---
 
 **Issue: Database connection errors**
 
@@ -321,7 +357,7 @@ cd server && npm run dev  # Backend (Terminal 2)
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# Backend API URL (IMPORTANT: Change in production!)
+# Backend API URL (IMPORTANT: DO NOT include /api suffix!)
 VITE_API_URL=http://localhost:3001
 VITE_BACKEND_URL=http://localhost:3001
 
@@ -330,9 +366,13 @@ DATABASE_URL=your_database_connection_string
 ```
 
 > **🚨 Production Deployment:**  
-> When deploying to Netlify, set these to your Render backend URL:
-> - `VITE_API_URL=https://your-backend.onrender.com`
-> - `VITE_BACKEND_URL=https://your-backend.onrender.com`
+> When deploying to Netlify, set these to your Render backend URL **WITHOUT** `/api`:
+> - ✅ `VITE_API_URL=https://your-backend.onrender.com`
+> - ✅ `VITE_BACKEND_URL=https://your-backend.onrender.com`
+> - ❌ NOT: `https://your-backend.onrender.com/api` (will cause 404 errors)
+>
+> **Why?** The frontend code automatically appends `/api/...` to all endpoints.  
+> Setting `VITE_API_URL=https://backend.com/api` results in broken URLs like `/api/api/auth/login`.
 
 ### Backend `server/.env`
 ```env

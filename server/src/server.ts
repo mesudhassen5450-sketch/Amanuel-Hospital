@@ -14,12 +14,37 @@ const app = express();
 const server = http.createServer(app);
 
 const PORT = Number(process.env.PORT) || 3001;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
+
+// ── CORS Configuration ─────────────────────────────────────────────────────
+const allowedOrigins = [
+  "https://amanuelhospital.com.et",
+  "https://amanuelhospital.netlify.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
+// Add custom origin from environment variable if provided
+if (process.env.CORS_ORIGIN) {
+  const customOrigins = process.env.CORS_ORIGIN.split(",").map((o) => o.trim());
+  allowedOrigins.push(...customOrigins);
+}
 
 // ── Middlewares ─────────────────────────────────────────────────────────────
 app.use(
   cors({
-    origin: CORS_ORIGIN,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or Postman)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        return callback(null, true);
+      }
+      
+      // Reject other origins
+      console.warn(`[CORS] Blocked request from origin: ${origin}`);
+      return callback(new Error("Not allowed by CORS"));
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
@@ -57,7 +82,19 @@ app.get("/", (req, res) => {
 // ── Socket.IO Server & Real-Time Signaling ──────────────────────────────────
 const io = new SocketIOServer(server, {
   cors: {
-    origin: CORS_ORIGIN,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        return callback(null, true);
+      }
+      
+      // Reject other origins
+      console.warn(`[Socket.IO CORS] Blocked request from origin: ${origin}`);
+      return callback(new Error("Not allowed by CORS"));
+    },
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -182,7 +219,7 @@ server.listen(PORT, () => {
   console.log(`
   🏥 Dr. Amanuel Hospital Backend Server
   🚀 HTTP & Socket.IO server running on http://localhost:${PORT}
-  📡 CORS allowed origin: ${CORS_ORIGIN}
+  📡 CORS allowed origins: ${allowedOrigins.join(", ")}
   ⚡ Health Check: http://localhost:${PORT}/health
   🔐 Auth Endpoint: http://localhost:${PORT}/api/auth/login
   `);

@@ -274,12 +274,16 @@ cd server && npm run dev  # Backend (Terminal 2)
    JWT_SECRET=your_secure_secret
    DATABASE_URL=your_database_url
    DIRECT_URL=your_direct_database_url
-   CORS_ORIGIN=https://your-frontend-domain.netlify.app
+   CORS_ORIGIN=https://amanuelhospital.com.et
    BACKEND_URL=https://your-backend.onrender.com
-   FRONTEND_URL=https://your-frontend-domain.netlify.app
+   FRONTEND_URL=https://amanuelhospital.com.et
    ```
 
-5. **Important:** Update `CORS_ORIGIN` to match your exact Netlify domain!
+5. **⚠️ CORS Configuration:** 
+   - The backend now supports multiple hardcoded origins including your production domains
+   - `CORS_ORIGIN` can optionally add more comma-separated origins if needed
+   - Default allowed origins: `amanuelhospital.com.et`, `amanuelhospital.netlify.app`, localhost ports
+   - Make sure your Netlify domain matches exactly (with or without `www.`)!
 
 ### Troubleshooting Deployment
 

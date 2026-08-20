@@ -226,15 +226,113 @@ cd server && npm run dev  # Backend (Terminal 2)
 
 ---
 
+## 🚀 **Deployment Guide**
+
+### Frontend (Netlify)
+
+1. **Connect your GitHub repository** to Netlify
+2. **Configure build settings:**
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+   - Node version: 20
+
+3. **Add environment variables** in Netlify Dashboard → Site configuration → Environment variables:
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_anon_key
+   VITE_API_URL=https://your-backend.onrender.com
+   VITE_BACKEND_URL=https://your-backend.onrender.com
+   DATABASE_URL=your_database_url
+   ```
+
+4. **⚠️ CRITICAL:** After adding/changing environment variables, you MUST:
+   - Go to **Deploys** tab
+   - Click **Trigger deploy** → **Clear cache and deploy site**
+   - Vite embeds env vars during build, so cached builds will use old values!
+
+### Backend (Render)
+
+1. **Create a Web Service** on Render
+2. **Connect your GitHub repository**
+3. **Configure settings:**
+   - Root directory: `server`
+   - Build command: `npm install && npm run build`
+   - Start command: `npm start`
+   - Node version: 20
+
+4. **Add environment variables:**
+   ```
+   PORT=3001
+   NODE_ENV=production
+   JWT_SECRET=your_secure_secret
+   DATABASE_URL=your_database_url
+   DIRECT_URL=your_direct_database_url
+   CORS_ORIGIN=https://your-frontend-domain.netlify.app
+   BACKEND_URL=https://your-backend.onrender.com
+   FRONTEND_URL=https://your-frontend-domain.netlify.app
+   ```
+
+5. **Important:** Update `CORS_ORIGIN` to match your exact Netlify domain!
+
+### Troubleshooting Deployment
+
+<details>
+<summary><b>🔧 Common Issues & Solutions</b></summary>
+
+<br>
+
+**Issue: Frontend still calls `localhost:3001` in production**
+
+✅ **Solution:**
+1. Verify `VITE_API_URL` and `VITE_BACKEND_URL` are set in Netlify environment variables
+2. Click **Clear cache and deploy site** (Vite embeds env vars at build time!)
+3. Test in incognito mode to avoid browser caching
+
+**Issue: CORS errors**
+
+✅ **Solution:**
+1. Ensure `CORS_ORIGIN` in Render backend matches your Netlify URL exactly
+2. No trailing slashes in URLs
+3. Use `https://` not `http://` for production
+
+**Issue: 401 Unauthorized errors**
+
+✅ **Solution:**
+1. Check that `JWT_SECRET` is the same in all environments
+2. Clear browser localStorage and login again
+3. Verify backend is deployed and running
+
+**Issue: Database connection errors**
+
+✅ **Solution:**
+1. Ensure `DATABASE_URL` uses port 6543 with `?pgbouncer=true`
+2. Ensure `DIRECT_URL` uses port 5432 (for migrations)
+3. Check Supabase connection pooling settings
+
+</details>
+
+---
+
 ## 🔐 **Environment Variables**
 
 ### Frontend `.env`
 ```env
+# Supabase Configuration
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Backend API URL (IMPORTANT: Change in production!)
 VITE_API_URL=http://localhost:3001
+VITE_BACKEND_URL=http://localhost:3001
+
+# Database (for local Prisma development)
 DATABASE_URL=your_database_connection_string
 ```
+
+> **🚨 Production Deployment:**  
+> When deploying to Netlify, set these to your Render backend URL:
+> - `VITE_API_URL=https://your-backend.onrender.com`
+> - `VITE_BACKEND_URL=https://your-backend.onrender.com`
 
 ### Backend `server/.env`
 ```env

@@ -1,228 +1,381 @@
-# Dr. Amanuel Hospital Website
-
-🌐 **Live Site:** [https://amanuelhospital.netlify.app/](https://amanuelhospital.netlify.app/)
-
----
-
-## 📸 Screenshots
-
 <div align="center">
-  <img src="scrren/aman.png" alt="Dr. Amanuel Hospital Homepage" width="100%" />
-  <p><em>Homepage with multilingual support and modern design</em></p>
-  
-  <img src="scrren/aman 2.png" alt="Dr. Amanuel Hospital Services Page" width="100%" />
-  <p><em>Services and features showcase</em></p>
+
+# 🏥 Dr. Amanuel Hospital Management System
+
+### *Modern Healthcare Platform for Digital Hospital Operations*
+
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Visit_Site-success?style=for-the-badge)](https://amanuelhospital.netlify.app/)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=for-the-badge&logo=github)](https://github.com/mesudhassen5450-sketch/Amanuel-Hospital)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](#-license)
+
+![Project Banner](scrren/aman.png)
+
+*A comprehensive full-stack hospital management system integrating public services, clinical operations, and administrative workflows.*
+
 </div>
 
 ---
 
-## 📋 Description
+## 📋 **Quick Overview**
 
-A modern, multilingual hospital website for **Dr. Amanuel Hospital** in Bishoftu, Ethiopia. The website provides comprehensive information about medical services, doctors, departments, and facilities with full support for three languages: English, Amharic (አማርኛ), and Afaan Oromo.
-
-### Key Features
-
-- **🌍 Multilingual Support** - Complete translations in English, Amharic, and Afaan Oromo
-- **🤖 AI Assistant** - Intelligent chatbot powered by Groq API to answer patient questions 24/7
-- **📱 Responsive Design** - Optimized for mobile, tablet, and desktop devices
-- **⚡ Modern Tech Stack** - Built with React, TanStack Start, and Tailwind CSS for optimal performance
-- **📺 Media Integration** - Featured video coverage from OBN Television
-- **🔗 Social Media** - Connected to Facebook and Telegram for easy patient communication
-- **♿ Accessible** - Designed with accessibility best practices
-
-### Pages
-
-- **Home** - Hero section, services overview, featured doctors, testimonials, and FAQ
-- **About** - Hospital history, mission, values, achievements, and timeline
-- **Services** - Comprehensive medical services including emergency care, surgery, laboratory, pharmacy, and more
-- **Doctors** - Meet our experienced medical team with specializations and availability
-- **Departments** - Detailed information about medical departments
-- **Gallery** - Visual showcase of facilities and equipment
-- **Contact** - Location, hours, contact information, and appointment booking
+**Dr. Amanuel Hospital Management System** is a modern web-based platform designed to digitize and streamline healthcare delivery. Built during the **Sof Omar Technologies Internship Program**, this system addresses the gap between public-facing hospital services and internal clinical workflows. It serves patients, doctors, administrative staff, and hospital management with a unified, efficient digital solution.
 
 ---
 
-## 🚀 Technology Stack
+## ⭐ **Key Features**
 
-- **Framework:** [TanStack Start](https://tanstack.com/start) (React SSR)
-- **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
-- **UI Components:** [Radix UI](https://www.radix-ui.com/)
-- **Language Management:** React Context API with custom translation system
-- **AI Integration:** [Groq API](https://groq.com/) with llama-3.3-70b-versatile model
-- **Deployment:** [Netlify](https://www.netlify.com/) with serverless functions
-- **Version Control:** Git & GitHub
+<table>
+<tr>
+<td width="50%">
+
+### 🌐 **Public Services**
+- 🏛️ Hospital information & services
+- 👨‍⚕️ Doctor profiles & specializations
+- 🏥 Department showcase
+- 📅 Online appointment booking
+- 🖼️ Facility gallery
+- 🌍 Multilingual support (English, Amharic, Oromo)
+- 🤖 AI-powered chatbot assistant
+
+</td>
+<td width="50%">
+
+### 👤 **Patient Management**
+- 📝 Patient registration system
+- 🔢 Automatic MRN generation
+- 📂 Digital patient profiles
+- 🔗 Appointment-patient linking
+- 📊 Medical history tracking
+- 💊 Prescription management
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 👨‍⚕️ **Clinical Workflow**
+- 📊 Doctor dashboard
+- 👥 Real-time patient queue
+- 🩺 Digital consultations
+- 📋 Vital signs recording
+- 💬 Clinical notes
+- 📝 Diagnosis & treatment plans
+- 🎥 Telemedicine video consultations
+
+</td>
+<td width="50%">
+
+### 🔐 **Security & Admin**
+- 🔒 JWT-based authentication
+- 👮 Role-based access control (RBAC)
+- 🛡️ Protected staff routes
+- 🔑 Secure session management
+- 👨‍💼 Admin dashboard
+- 👥 Staff account management
+- 📈 System analytics
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary><b>🧪 Laboratory Features</b></summary>
+
+- 📋 Lab test requests
+- 🔬 Result entry & management
+- 📊 Test tracking
+- 👨‍🔬 Technician workflow
+
+</details>
+
+<details>
+<summary><b>💊 Pharmacy Features</b></summary>
+
+- 💊 Medicine inventory
+- 📝 Prescription processing
+- 🏪 Dispensing workflow
+- 📦 Stock management
+
+</details>
+
+<details>
+<summary><b>💳 Payment System</b></summary>
+
+- 💰 Payment calculation with tax
+- 💳 Multiple payment methods
+- 📄 Invoice generation
+- 📊 Payment tracking
+
+</details>
 
 ---
 
-## 🛠️ Development Setup
+## 🏗️ **System Architecture**
+
+```
+                    👥 Patients & Staff
+                           │
+                           ▼
+        ┌──────────────────────────────────┐
+        │   React 19 + TypeScript          │
+        │   TanStack Start + Tailwind CSS  │
+        └─────────────┬────────────────────┘
+                      │
+                      │ HTTPS / WebSocket
+                      │
+        ┌─────────────▼────────────────────┐
+        │   Express.js Backend Server      │
+        │   Socket.IO + Prisma ORM         │
+        └─────────────┬────────────────────┘
+                      │
+                      │ PostgreSQL Protocol
+                      │
+        ┌─────────────▼────────────────────┐
+        │   Supabase PostgreSQL Database   │
+        │   Multi-schema (auth, public)    │
+        └──────────────────────────────────┘
+```
+
+---
+
+## 🛠️ **Technology Stack**
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 19, TypeScript, TanStack Start |
+| **Styling** | Tailwind CSS v4, Radix UI |
+| **Backend** | Node.js, Express.js, TypeScript |
+| **Database** | PostgreSQL (Supabase) |
+| **ORM** | Prisma |
+| **Real-time** | Socket.IO, WebRTC |
+| **Authentication** | JWT (jsonwebtoken) |
+| **Password Security** | bcryptjs |
+| **Deployment** | Netlify (Frontend), Render (Backend) |
+| **Version Control** | Git & GitHub |
+
+---
+
+## 📈 **Development Journey**
+
+```
+🏗️ Phase 1: Foundation
+   Database schema & appointment booking system
+                    ↓
+👤 Phase 4: Patient Management
+   Patient registration with automatic MRN generation
+                    ↓
+🩺 Phase 5: Clinical Operations
+   Doctor dashboard & electronic health records
+                    ↓
+🧪 Phase 6: Laboratory Integration
+   Lab test requests & results management
+                    ↓
+💊 Phase 7: Pharmacy Module
+   Medicine inventory & prescription dispensing
+                    ↓
+💬 Phase 8: Communication
+   Integrated messaging & telemedicine consultations
+                    ↓
+🔐 Phase 9: Security & Administration
+   JWT authentication, RBAC, and admin dashboard
+```
+
+---
+
+## 🚀 **Getting Started**
 
 ### Prerequisites
-
-- Node.js 20 or higher
-- npm or bun package manager
-- Git
+- Node.js 20+ 
+- npm or bun
+- PostgreSQL database (or Supabase account)
 
 ### Installation
 
-1. Clone the repository:
 ```bash
+# Clone the repository
 git clone https://github.com/mesudhassen5450-sketch/Amanuel-Hospital.git
 cd Amanuel-Hospital
-```
 
-2. Install dependencies:
-```bash
+# Install frontend dependencies
 npm install
+
+# Install backend dependencies
+cd server
+npm install
+cd ..
+
+# Set up environment variables
+cp .env.example .env
+cp server/.env.example server/.env
+# Edit .env files with your credentials
+
+# Run database migrations (backend)
+cd server
+npx prisma generate
+npx prisma db push
+cd ..
+
+# Start development servers
+npm run dev           # Frontend (Terminal 1)
+cd server && npm run dev  # Backend (Terminal 2)
 ```
 
-3. Create a `.env` file in the root directory:
+### Access
+- **Frontend:** http://localhost:3000
+- **Backend API:** http://localhost:3001
+
+---
+
+## 🔐 **Environment Variables**
+
+### Frontend `.env`
 ```env
-GROQ_API_KEY=your_groq_api_key_here
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_API_URL=http://localhost:3001
+DATABASE_URL=your_database_connection_string
 ```
 
-4. Start the development server:
-```bash
-npm run dev
+### Backend `server/.env`
+```env
+PORT=3001
+NODE_ENV=development
+JWT_SECRET=your_secure_jwt_secret
+DATABASE_URL=your_database_url_with_pgbouncer
+DIRECT_URL=your_direct_database_url
+CORS_ORIGIN=http://localhost:3000
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+> ⚠️ **Important:** Never commit `.env` files or expose real credentials!
 
 ---
 
-## 📦 Build & Deploy
+## 🧪 **Tested Workflows**
 
-### Build for Production
+<details>
+<summary><b>✅ All Major Workflows Verified</b></summary>
 
-```bash
-npm run build
-```
+<br>
 
-This generates:
-- `dist/` - Client-side assets (HTML, CSS, JS, images)
-- `.netlify/functions-internal/` - Serverless functions for SSR
+| Status | Workflow | Description |
+|:---:|---|---|
+| ✅ | **Public Website** | Hospital info, services, doctor profiles |
+| ✅ | **Appointment Booking** | Online scheduling with payment |
+| ✅ | **Patient Registration** | New patient enrollment |
+| ✅ | **MRN Generation** | Automatic medical record numbers |
+| ✅ | **Reception Workflow** | Check-in and queue management |
+| ✅ | **Doctor Consultation** | Clinical examinations and notes |
+| ✅ | **Laboratory Workflow** | Test requests and results |
+| ✅ | **Pharmacy Workflow** | Prescription dispensing |
+| ✅ | **Payment Processing** | Billing calculations |
+| ✅ | **Staff Authentication** | Secure login system |
+| ✅ | **RBAC** | Role-based permissions |
+| ✅ | **Admin Dashboard** | Staff & system management |
+| ✅ | **Telemedicine** | Video consultations (WebRTC) |
 
-### Deploy to Netlify
-
-The project is configured for automatic deployment on Netlify:
-
-1. Connect your GitHub repository to Netlify
-2. Set the build command: `npm run build`
-3. Set the publish directory: `dist`
-4. Add environment variable: `GROQ_API_KEY`
-5. Deploy!
-
-Alternatively, use the Netlify CLI:
-```bash
-npm install -g netlify-cli
-netlify deploy --prod
-```
+</details>
 
 ---
 
-## 🌐 Multilingual System
+## 📸 **Screenshots**
 
-The website supports three languages with complete translations:
+<details>
+<summary><b>🖼️ View Application Screenshots</b></summary>
 
-- **English** (default)
-- **አማርኛ** (Amharic)
-- **Afaan Oromo**
+<br>
 
-Language preference is stored in localStorage and persists across sessions. The language switcher is available in the navigation bar.
+### 🏠 Homepage
+![Homepage](scrren/aman.png)
 
-### Translation Files
+### 🌐 Services Page
+![Services](scrren/aman%202.png)
 
-- `src/lib/translations.ts` - All translated content
-- `src/lib/language-context.tsx` - Language state management
+*Additional screenshots available in `/scrren` directory*
 
----
-
-## 🤖 AI Chatbot
-
-The AI assistant uses Groq's llama-3.3-70b-versatile model and is trained on:
-
-- Hospital services and departments
-- Doctor information and specializations
-- Working hours and contact details
-- Appointment booking process
-- Common patient questions
-
-The chatbot responds in the user's selected language.
+</details>
 
 ---
 
-## 📁 Project Structure
+## 📁 **Project Structure**
 
 ```
-dr-amanuel-health-showcase-main/
-├── public/              # Static assets (videos, favicon, robots.txt)
-├── src/
-│   ├── assets/         # Images and media files
-│   ├── components/
-│   │   ├── site/      # Site-wide components (Navbar, Footer, etc.)
-│   │   └── ui/        # Reusable UI components
-│   ├── lib/
-│   │   ├── chat-server.ts       # AI chatbot backend
-│   │   ├── language-context.tsx # Language state management
-│   │   ├── translations.ts      # Translation data
-│   │   └── site-data.ts        # Hospital data (doctors, services)
-│   ├── routes/        # Page components (index, about, services, etc.)
-│   ├── router.tsx     # Route configuration
-│   └── server.ts      # SSR entry point
-├── .env               # Environment variables (not committed)
-├── netlify.toml       # Netlify deployment configuration
-├── package.json       # Dependencies and scripts
-└── vite.config.ts     # Vite configuration
+Amanuel-Hospital/
+├── src/                    # Frontend source
+│   ├── components/         # React components
+│   ├── routes/            # Page components
+│   ├── lib/               # Utilities & configs
+│   └── assets/            # Images & media
+├── server/                # Backend source
+│   ├── src/
+│   │   ├── controllers/   # Route controllers
+│   │   ├── routes/        # API routes
+│   │   ├── middlewares/   # Auth & validation
+│   │   └── sockets/       # Socket.IO handlers
+│   └── prisma/
+│       └── schema.prisma  # Database schema
+├── public/                # Static assets
+├── .env.example           # Environment template
+└── README.md              # This file
 ```
 
 ---
 
-## 🔗 Links
+## 🔐 **Security Features**
 
-- **Live Website:** [https://amanuelhospital.netlify.app/](https://amanuelhospital.netlify.app/)
-- **GitHub Repository:** [https://github.com/mesudhassen5450-sketch/Amanuel-Hospital](https://github.com/mesudhassen5450-sketch/Amanuel-Hospital)
-- **Facebook:** [Dr. Amanuel Hospital on Facebook](https://web.facebook.com/Amanuelhtufa)
-- **Telegram:** [@amanuelbishoftu](https://t.me/amanuelbishoftu)
-
----
-
-## 📞 Contact
-
-**Dr. Amanuel Hospital**  
-Bishoftu, Ethiopia
-
-- **Phone:** +251 11 000 0000
-- **Emergency:** +251 11 111 1111
-- **Email:** info@amanuelhospital.et
-
-**Working Hours:**
-- Monday - Friday: 8:00 AM - 6:00 PM
-- Saturday: 9:00 AM - 4:00 PM
-- Sunday: Closed (Emergency services 24/7)
+- 🔒 **JWT Authentication** - Secure token-based auth
+- 👮 **Role-Based Access Control** - Fine-grained permissions
+- 🛡️ **Protected Routes** - Server-side authorization
+- 🔑 **Password Hashing** - bcrypt encryption
+- 🚪 **Session Management** - Secure session handling
+- 🌐 **CORS Protection** - Origin validation
+- 🔐 **Environment Variables** - Sensitive data protection
 
 ---
 
-## 📄 License
+## 👨‍💻 **Author**
 
-This project is proprietary software owned by Dr. Amanuel Hospital. All rights reserved.
+<div align="center">
 
----
+### **Mesud Hassen**
 
-## 👨‍💻 Development Team
+🎓 Information Technology Student  
+🏫 Haramaya University, College of Computing and Informatics  
+🇪🇹 Ethiopia
 
-Built with ❤️ for Dr. Amanuel Hospital using modern web technologies.
+[![GitHub](https://img.shields.io/badge/GitHub-mesudhassen5450--sketch-181717?style=for-the-badge&logo=github)](https://github.com/mesudhassen5450-sketch)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Mesud_Mesman-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/mesud-mesman-837466413/)
 
-For technical support or inquiries about the website, please contact the development team through the hospital administration.
-
----
-
-## 🙏 Acknowledgments
-
-- UI components from [shadcn/ui](https://ui.shadcn.com/)
-- Icons from [Lucide](https://lucide.dev/)
-- AI powered by [Groq](https://groq.com/)
-- Hosted on [Netlify](https://www.netlify.com/)
-- Built with [TanStack Start](https://tanstack.com/start)
+</div>
 
 ---
 
-**Last Updated:** July 2026
+## 🎓 **Internship Program**
+
+This project was developed as part of the **Sof Omar Technologies Internship Program**, demonstrating practical full-stack development skills and real-world healthcare IT solutions.
+
+---
+
+## 📜 **License**
+
+This project is licensed under the **MIT License** - see the LICENSE file for details.
+
+---
+
+## 🙏 **Acknowledgments**
+
+Special thanks to:
+- **Sof Omar Technologies** for the internship opportunity
+- **Dr. Amanuel Hospital** for the project inspiration
+- Open-source community for the amazing tools and libraries
+
+---
+
+<div align="center">
+
+### **Built with ❤️, curiosity, and continuous learning**
+
+[![Star this repo](https://img.shields.io/github/stars/mesudhassen5450-sketch/Amanuel-Hospital?style=social)](https://github.com/mesudhassen5450-sketch/Amanuel-Hospital)
+
+**[⬆ Back to Top](#-dr-amanuel-hospital-management-system)**
+
+</div>

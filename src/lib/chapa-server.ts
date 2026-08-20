@@ -40,7 +40,7 @@ export const initializeChapaPayment = createServerFn({ method: "POST" })
       const response = await fetch("https://api.chapa.co/v1/transaction/initialize", {
         method: "POST",
         headers: {
-          "Authorization": "Bearer CHASECK_TEST-pQf9ooXqdEajEHx9Bny1t5oXbLgiYxYn",
+          "Authorization": `Bearer ${process.env.CHAPA_SECRET_KEY || ''}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify(body)
@@ -86,7 +86,7 @@ export const verifyChapaPayment = createServerFn({ method: "POST" })
       const response = await fetch(`https://api.chapa.co/v1/transaction/verify/${txRef}`, {
         method: "GET",
         headers: {
-          "Authorization": "Bearer CHASECK_TEST-pQf9ooXqdEajEHx9Bny1t5oXbLgiYxYn"
+          "Authorization": `Bearer ${process.env.CHAPA_SECRET_KEY || ''}`
         }
       });
 

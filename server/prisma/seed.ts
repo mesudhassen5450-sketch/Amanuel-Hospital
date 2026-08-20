@@ -14,7 +14,9 @@ const { Pool } = pg;
 // Use IPv4-compatible pooler host with statement_cache_size=0 for PgBouncer compatibility
 const DATABASE_URL =
   process.env.DATABASE_URL ||
-  'postgresql://postgres.effhdgpklekbwmvmqlfe:Mh0954501670@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true&statement_cache_size=0';
+  (() => {
+    throw new Error('DATABASE_URL environment variable is required');
+  })();
 
 // Create connection pool
 const pool = new Pool({

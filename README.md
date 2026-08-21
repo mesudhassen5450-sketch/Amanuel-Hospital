@@ -1,8 +1,10 @@
 <div align="center">
 
-# 🏥 [Dr. Amanuel Hospital Management System](https://amanuelhospital.com.et)
+# 🏥 Dr. Amanuel Hospital Management System
 
 ### *Modern Healthcare Platform for Digital Hospital Operations*
+
+**🌐 Live Website:** [www.amanuelhospital.com.et](https://www.amanuelhospital.com.et)
 
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Visit_Site-success?style=for-the-badge)](https://amanuelhospital.com.et/)
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=for-the-badge&logo=github)](https://github.com/mesudhassen5070-skech/Amanuel-Hospital-Main2)
@@ -448,6 +450,9 @@ CORS_ORIGIN=http://localhost:3000
 
 ### 🩺 Doctor Dashboard
 ![Doctor Dashboard](public/scrrenshhots%20git%20hub/doctordashboard%20(2).png)
+
+### 🧪 Laboratory Portal
+![Laboratory Portal](public/scrrenshhots%20git%20hub/laboratory.png)
 
 ### 🎥 Video Call & Real-Time Messaging
 ![Video Consultation](public/scrrenshhots%20git%20hub/video%20call%20and%20messge%20real%20time.jpg)

@@ -4,38 +4,7 @@
  * Integrates with Chapa payment gateway for Ethiopian payments
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-/**
- * Get authentication token from localStorage
- */
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('token') || localStorage.getItem('auth_token');
-};
-
-/**
- * Build fetch headers with Bearer token
- */
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-  };
-};
-
-/**
- * Handle API response and extract data or throw error
- */
-const handleResponse = async <T>(response: Response): Promise<T> => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || data.message || 'Request failed');
-  }
-
-  return data;
-};
+import { apiFetch, handleApiResponse } from "./client";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PAYMENT TYPES
@@ -112,13 +81,12 @@ export interface CalculateBillingData {
  * Calculate billing with subtotal, tax (15%), and total
  */
 export const calculateBilling = async (data: CalculateBillingData): Promise<BillingCalculation> => {
-  const response = await fetch(`${API_BASE_URL}/api/payments/calculate`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
+  const response = await apiFetch("/api/payments/calculate", {
+    method: "POST",
     body: JSON.stringify(data),
   });
 
-  return handleResponse<BillingCalculation>(response);
+  return handleApiResponse<BillingCalculation>(response);
 };
 
 /**
@@ -129,13 +97,12 @@ export const calculateBilling = async (data: CalculateBillingData): Promise<Bill
 export const createInvoiceAndInitializePayment = async (
   data: CreateInvoiceData
 ): Promise<CreateInvoiceResponse> => {
-  const response = await fetch(`${API_BASE_URL}/api/payments/invoices`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
+  const response = await apiFetch("/api/payments/invoices", {
+    method: "POST",
     body: JSON.stringify(data),
   });
 
-  return handleResponse<CreateInvoiceResponse>(response);
+  return handleApiResponse<CreateInvoiceResponse>(response);
 };
 
 /**
@@ -143,12 +110,11 @@ export const createInvoiceAndInitializePayment = async (
  * Verify payment status from Chapa and update invoice
  */
 export const verifyPayment = async (txRef: string): Promise<VerifyPaymentResponse> => {
-  const response = await fetch(`${API_BASE_URL}/api/payments/verify/${txRef}`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/api/payments/verify/${txRef}`, {
+    method: "GET",
   });
 
-  return handleResponse<VerifyPaymentResponse>(response);
+  return handleApiResponse<VerifyPaymentResponse>(response);
 };
 
 /**
@@ -156,12 +122,11 @@ export const verifyPayment = async (txRef: string): Promise<VerifyPaymentRespons
  * Get invoice details by transaction reference
  */
 export const getInvoiceByTxRef = async (txRef: string): Promise<Invoice> => {
-  const response = await fetch(`${API_BASE_URL}/api/payments/invoices/${txRef}`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/api/payments/invoices/${txRef}`, {
+    method: "GET",
   });
 
-  const result = await handleResponse<{ success: boolean; invoice: Invoice }>(response);
+  const result = await handleApiResponse<{ success: boolean; invoice: Invoice }>(response);
   return result.invoice;
 };
 
@@ -170,12 +135,11 @@ export const getInvoiceByTxRef = async (txRef: string): Promise<Invoice> => {
  * Get all invoices for a specific patient
  */
 export const getPatientInvoices = async (patientId: number | string): Promise<Invoice[]> => {
-  const response = await fetch(`${API_BASE_URL}/api/payments/invoices/patient/${patientId}`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/api/payments/invoices/patient/${patientId}`, {
+    method: "GET",
   });
 
-  const result = await handleResponse<{ success: boolean; count: number; invoices: Invoice[] }>(response);
+  const result = await handleApiResponse<{ success: boolean; count: number; invoices: Invoice[] }>(response);
   return result.invoices;
 };
 

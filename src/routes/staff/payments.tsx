@@ -80,7 +80,7 @@ function PaymentsPage() {
   const totalPending = appts.filter(a => a.paymentStatus === "pending").reduce((s, a) => s + Number(a.amount), 0);
 
   return (
-    <StaffGuard allowedRoles={["reception", "staff"]}>
+    <StaffGuard allowedRoles={["reception", "staff", "cashier"]}>
       <StaffLayout>
         {/* Page header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { normalizeStaffRole, type StaffRole } from "./staff-roles";
 
-export type StaffRole = "admin" | "staff" | "reception" | "cashier" | "doctor" | "laboratory" | "pharmacy" | null;
+export type { StaffRole };
 
 // ── Session constants ─────────────────────────────────────────────────────────
 const SESSION_KEY    = "staff_session";
@@ -60,8 +61,6 @@ function writeSession(s: SessionData): void {
 function clearSession(): void {
   try {
     sessionStorage.removeItem(SESSION_KEY);
-    // Also clear any related keys
-    sessionStorage.clear();
   } catch {}
 }
 
@@ -92,7 +91,12 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const s = readSession();
     if (s) {
-      setUser({ username: s.username, role: s.role, displayName: s.displayName });
+      const normalizedRole = normalizeStaffRole(s.role as string);
+      if (normalizedRole !== s.role) {
+        s.role = normalizedRole;
+        writeSession(s);
+      }
+      setUser({ username: s.username, role: normalizedRole, displayName: s.displayName });
     }
     setHydrated(true);
   }, []);
@@ -183,7 +187,10 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('token', result.token);
 
         const now = Date.now();
-        const normalizedRole = (result.user.role as string).toLowerCase() as StaffRole;
+        const normalizedRole = normalizeStaffRole(result.user.role as string);
+        if (!normalizedRole) {
+          return { success: false, error: "Unknown staff role returned by server." };
+        }
         const session: SessionData = {
           username:    result.user.username,
           role:        normalizedRole,

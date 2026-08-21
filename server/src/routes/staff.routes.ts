@@ -19,7 +19,7 @@ const router = Router();
 router.get(
     '/',
     authenticateToken,
-    authorizeRoles('admin'),
+    authorizeRoles('ADMIN'),
     getAllStaffAccounts
 );
 
@@ -27,7 +27,7 @@ router.get(
 router.post(
     '/',
     authenticateToken,
-    authorizeRoles('admin'),
+    authorizeRoles('ADMIN'),
     createStaffAccount
 );
 
@@ -35,7 +35,7 @@ router.post(
 router.put(
     '/:id',
     authenticateToken,
-    authorizeRoles('admin'),
+    authorizeRoles('ADMIN'),
     updateStaffAccount
 );
 
@@ -43,7 +43,7 @@ router.put(
 router.put(
     '/:id/password',
     authenticateToken,
-    authorizeRoles('admin'),
+    authorizeRoles('ADMIN'),
     resetStaffPassword
 );
 
@@ -51,7 +51,7 @@ router.put(
 router.patch(
     '/:id/status',
     authenticateToken,
-    authorizeRoles('admin'),
+    authorizeRoles('ADMIN'),
     toggleStaffStatus
 );
 
@@ -59,7 +59,7 @@ router.patch(
 router.delete(
     '/:id',
     authenticateToken,
-    authorizeRoles('admin'),
+    authorizeRoles('ADMIN'),
     deleteStaffAccount
 );
 

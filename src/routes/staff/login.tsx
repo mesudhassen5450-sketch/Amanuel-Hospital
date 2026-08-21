@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useStaffAuth } from "@/lib/staff-auth";
+import { getStaffDashboardPath, normalizeStaffRole } from "@/lib/staff-roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,34 +16,33 @@ export const Route = createFileRoute("/staff/login")({
 });
 
 function StaffLoginPage() {
-  const { login, isAuthenticated, hydrated } = useStaffAuth();
+  const { login, isAuthenticated, hydrated, user } = useStaffAuth();
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Wait for hydration before checking auth
   useEffect(() => {
-    if (hydrated && isAuthenticated) {
-      const storedRaw = sessionStorage.getItem("staff_session");
-      const roleRaw = storedRaw ? JSON.parse(storedRaw).role : null;
-      const role = typeof roleRaw === "string" ? roleRaw.toLowerCase() : null;
-      if (role === "admin")           window.location.href = "/staff/admin";
-      else if (role === "cashier")    window.location.href = "/staff/payments";
-      else if (role === "doctor")     window.location.href = "/staff/doctor/dashboard";
-      else if (role === "laboratory") window.location.href = "/staff/laboratory/dashboard";
-      else if (role === "pharmacy")   window.location.href = "/staff/pharmacy/dashboard";
-      else if (role === "reception" || role === "staff") window.location.href = "/staff/dashboard";
-      else                            window.location.href = "/staff/dashboard";
-    }
-  }, [hydrated, isAuthenticated]);
+    if (!hydrated || !isAuthenticated) return;
 
-  // Show spinner while hydrating
+    const role = normalizeStaffRole(user?.role ?? null);
+    if (!role) return;
+
+    // Prevent redirect loop: only redirect if not already on the target dashboard
+    const targetPath = getStaffDashboardPath(role);
+    const currentPath = window.location.pathname;
+    
+    if (currentPath !== targetPath) {
+      navigate({ to: targetPath, replace: true });
+    }
+  }, [hydrated, isAuthenticated, user, navigate]);
+
   if (!hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground gap-2">
         <Loader2 className="h-5 w-5 animate-spin" />
-        <span className="text-sm">Loading...</span>
+        <span className="text-sm">Loading session...</span>
       </div>
     );
   }
@@ -55,16 +55,12 @@ function StaffLoginPage() {
     const result = await login(username.trim().toLowerCase(), password);
     setLoading(false);
     if (result.success) {
-      // Role-based redirect — read from sessionStorage set by login()
       const storedRaw = sessionStorage.getItem("staff_session");
-      const roleRaw = storedRaw ? JSON.parse(storedRaw).role : null;
-      const role = typeof roleRaw === "string" ? roleRaw.toLowerCase() : null;
-      if (role === "admin")           { window.location.href = "/staff/admin"; }
-      else if (role === "cashier")    { window.location.href = "/staff/payments"; }
-      else if (role === "doctor")     { window.location.href = "/staff/doctor/dashboard"; }
-      else if (role === "laboratory") { window.location.href = "/staff/laboratory/dashboard"; }
-      else if (role === "pharmacy")   { window.location.href = "/staff/pharmacy/dashboard"; }
-      else                            { window.location.href = "/staff/dashboard"; }
+      const roleRaw = storedRaw ? JSON.parse(storedRaw).role : user?.role;
+      const role = normalizeStaffRole(roleRaw);
+      if (role) {
+        navigate({ to: getStaffDashboardPath(role), replace: true });
+      }
     } else {
       setError(result.error ?? "Invalid username or password. Please try again.");
     }
@@ -73,7 +69,6 @@ function StaffLoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/20 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md space-y-6 animate-fade-in">
-        {/* Branding */}
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="bg-primary/15 border border-primary/20 p-4 rounded-2xl">
             <Stethoscope className="h-10 w-10 text-primary" />
@@ -84,7 +79,6 @@ function StaffLoginPage() {
           </div>
         </div>
 
-        {/* Login card */}
         <Card className="border border-border bg-card shadow-xl rounded-3xl overflow-hidden">
           <div className="h-1.5 bg-gradient-to-r from-primary via-emerald-500 to-primary" />
           <CardHeader className="pt-7 pb-3 text-center">

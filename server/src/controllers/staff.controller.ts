@@ -86,6 +86,9 @@ export const createStaffAccount = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        // Normalize role to uppercase for consistency with database enum
+        const formattedRole = role.toUpperCase();
+
         // Check if username already exists
         const existingUser = await prisma.staffAccount.findUnique({
             where: { username: username.toLowerCase().trim() },
@@ -106,7 +109,7 @@ export const createStaffAccount = async (req: AuthRequest, res: Response) => {
             data: {
                 username: username.toLowerCase().trim(),
                 passwordHash,
-                role,
+                role: formattedRole,
                 displayName: displayName.trim(),
                 isActive: isActive !== undefined ? isActive : true,
                 isOnline: false,
@@ -123,7 +126,7 @@ export const createStaffAccount = async (req: AuthRequest, res: Response) => {
 
         // If role is doctor, attempt to create linked doctor record safely
         // Note: Doctor model may not exist in schema - gracefully skipped
-        if (role === 'doctor' || role === 'DOCTOR') {
+        if (formattedRole === 'DOCTOR') {
             try {
                 // Check if Doctor model exists before attempting to create
                 // Uncomment if Doctor model is added to schema:
@@ -200,6 +203,9 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        // Normalize role to uppercase for consistency with database enum
+        const formattedRole = role.toUpperCase();
+
         // Check if staff exists
         const existingStaff = await prisma.staffAccount.findUnique({
             where: { id: Number(id) },
@@ -231,7 +237,7 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
             where: { id: Number(id) },
             data: {
                 username: username.toLowerCase().trim(),
-                role,
+                role: formattedRole,
                 displayName: displayName.trim(),
                 isActive: isActive !== undefined ? isActive : existingStaff.isActive,
                 updatedAt: new Date(),
@@ -368,10 +374,10 @@ export const toggleStaffStatus = async (req: AuthRequest, res: Response) => {
         const newStatus = isActive !== undefined ? isActive : !existingStaff.isActive;
 
         // Prevent deactivating the last admin
-        if (existingStaff.role === 'admin' && !newStatus) {
+        if (existingStaff.role === 'ADMIN' && !newStatus) {
             const activeAdminCount = await prisma.staffAccount.count({
                 where: {
-                    role: 'admin',
+                    role: 'ADMIN',
                     isActive: true,
                 },
             });
@@ -450,10 +456,10 @@ export const deleteStaffAccount = async (req: AuthRequest, res: Response) => {
         }
 
         // Prevent deleting the last admin
-        if (existingStaff.role === 'admin') {
+        if (existingStaff.role === 'ADMIN') {
             const activeAdminCount = await prisma.staffAccount.count({
                 where: {
-                    role: 'admin',
+                    role: 'ADMIN',
                     isActive: true,
                 },
             });

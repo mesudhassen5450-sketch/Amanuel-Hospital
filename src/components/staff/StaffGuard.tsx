@@ -1,5 +1,11 @@
 import { type ReactNode, useEffect } from "react";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useStaffAuth } from "@/lib/staff-auth";
+import {
+  getStaffDashboardPath,
+  isRoleAllowed,
+  normalizeStaffRole,
+} from "@/lib/staff-roles";
 import { Loader2 } from "lucide-react";
 
 interface StaffGuardProps {
@@ -10,8 +16,9 @@ interface StaffGuardProps {
 
 export function StaffGuard({ children, allowedRoles }: StaffGuardProps) {
   const { isAuthenticated, hydrated, user } = useStaffAuth();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
 
-  // Prevent browser from caching this page so back-button shows login instead
   useEffect(() => {
     const meta = document.createElement("meta");
     meta.setAttribute("http-equiv", "Cache-Control");
@@ -31,44 +38,44 @@ export function StaffGuard({ children, allowedRoles }: StaffGuardProps) {
 
   useEffect(() => {
     if (!hydrated) return;
+
     if (!isAuthenticated) {
-      window.location.replace("/staff/login");
+      if (pathname !== "/staff/login") {
+        navigate({ to: "/staff/login", replace: true });
+      }
       return;
     }
 
-    // Role check — redirect to their own portal/dashboard
-    const userRole = user?.role ? (user.role as string).toLowerCase() : null;
-    const normalizedAllowed = allowedRoles?.map(r => r.toLowerCase());
+    const userRole = normalizeStaffRole(user?.role ?? null);
+    if (!userRole) {
+      if (pathname !== "/staff/login") {
+        navigate({ to: "/staff/login", replace: true });
+      }
+      return;
+    }
 
-    if (normalizedAllowed && userRole && !normalizedAllowed.includes(userRole)) {
-      if (userRole === "admin") window.location.replace("/staff/admin");
-      else if (userRole === "cashier") window.location.replace("/staff/payments");
-      else if (userRole === "doctor") window.location.replace("/staff/doctor/dashboard");
-      else if (userRole === "laboratory") window.location.replace("/staff/laboratory/dashboard");
-      else if (userRole === "pharmacy") window.location.replace("/staff/pharmacy/dashboard");
-      else if (userRole === "reception" || userRole === "staff") {
-        if (window.location.pathname !== "/staff/dashboard") {
-          window.location.replace("/staff/dashboard");
-        }
-      } else {
-        window.location.replace("/staff/login");
+    if (!isRoleAllowed(userRole, allowedRoles)) {
+      const target = getStaffDashboardPath(userRole);
+      // Prevent redirect loop: only redirect if not already on the target
+      if (pathname !== target && pathname !== "/staff/login") {
+        navigate({ to: target, replace: true });
       }
     }
-  }, [hydrated, isAuthenticated, user, allowedRoles]);
+  }, [hydrated, isAuthenticated, user, allowedRoles, pathname, navigate]);
 
   if (!hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground gap-2">
         <Loader2 className="h-5 w-5 animate-spin" />
-        <span className="text-sm">Loading...</span>
+        <span className="text-sm">Loading session...</span>
       </div>
     );
   }
 
   if (!isAuthenticated) return null;
-  const activeRole = user?.role ? (user.role as string).toLowerCase() : null;
-  const allowedNorm = allowedRoles?.map(r => r.toLowerCase());
-  if (allowedNorm && activeRole && !allowedNorm.includes(activeRole)) return null;
+
+  const userRole = normalizeStaffRole(user?.role ?? null);
+  if (!isRoleAllowed(userRole, allowedRoles)) return null;
 
   return <>{children}</>;
 }

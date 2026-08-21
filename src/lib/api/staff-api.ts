@@ -4,38 +4,7 @@
  * Replaces direct Supabase RPC calls
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-/**
- * Get authentication token from localStorage
- */
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('token') || localStorage.getItem('auth_token');
-};
-
-/**
- * Build fetch headers with Bearer token
- */
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-  };
-};
-
-/**
- * Handle API response and extract data or throw error
- */
-const handleResponse = async <T>(response: Response): Promise<T> => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || data.message || 'Request failed');
-  }
-
-  return data;
-};
+import { apiFetch, handleApiResponse } from "./client";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // STAFF ACCOUNT TYPES
@@ -85,12 +54,11 @@ export interface ToggleStatusData {
  * Fetch all staff accounts
  */
 export const getAllStaffAccounts = async (): Promise<StaffAccount[]> => {
-  const response = await fetch(`${API_BASE_URL}/api/staff`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
+  const response = await apiFetch("/api/staff", {
+    method: "GET",
   });
 
-  const result = await handleResponse<{ success: boolean; staff: StaffAccount[]; count: number }>(response);
+  const result = await handleApiResponse<{ success: boolean; staff: StaffAccount[]; count: number }>(response);
   return result.staff || [];
 };
 
@@ -99,13 +67,12 @@ export const getAllStaffAccounts = async (): Promise<StaffAccount[]> => {
  * Create a new staff account
  */
 export const createStaffAccount = async (data: CreateStaffData): Promise<StaffAccount> => {
-  const response = await fetch(`${API_BASE_URL}/api/staff`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
+  const response = await apiFetch("/api/staff", {
+    method: "POST",
     body: JSON.stringify(data),
   });
 
-  const result = await handleResponse<{ success: boolean; data: StaffAccount; message: string }>(response);
+  const result = await handleApiResponse<{ success: boolean; data: StaffAccount; message: string }>(response);
   return result.data;
 };
 
@@ -114,13 +81,12 @@ export const createStaffAccount = async (data: CreateStaffData): Promise<StaffAc
  * Update staff account details
  */
 export const updateStaffAccount = async (id: number, data: UpdateStaffData): Promise<StaffAccount> => {
-  const response = await fetch(`${API_BASE_URL}/api/staff/${id}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/api/staff/${id}`, {
+    method: "PUT",
     body: JSON.stringify(data),
   });
 
-  const result = await handleResponse<{ success: boolean; data: StaffAccount; message: string }>(response);
+  const result = await handleApiResponse<{ success: boolean; data: StaffAccount; message: string }>(response);
   return result.data;
 };
 
@@ -129,13 +95,12 @@ export const updateStaffAccount = async (id: number, data: UpdateStaffData): Pro
  * Reset staff password
  */
 export const resetStaffPassword = async (id: number, data: ResetPasswordData): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/api/staff/${id}/password`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/api/staff/${id}/password`, {
+    method: "PUT",
     body: JSON.stringify(data),
   });
 
-  await handleResponse<{ success: boolean; message: string }>(response);
+  await handleApiResponse<{ success: boolean; message: string }>(response);
 };
 
 /**
@@ -143,13 +108,12 @@ export const resetStaffPassword = async (id: number, data: ResetPasswordData): P
  * Toggle staff active status
  */
 export const toggleStaffStatus = async (id: number, data?: ToggleStatusData): Promise<StaffAccount> => {
-  const response = await fetch(`${API_BASE_URL}/api/staff/${id}/status`, {
-    method: 'PATCH',
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/api/staff/${id}/status`, {
+    method: "PATCH",
     body: JSON.stringify(data || {}),
   });
 
-  const result = await handleResponse<{ success: boolean; data: StaffAccount; message: string }>(response);
+  const result = await handleApiResponse<{ success: boolean; data: StaffAccount; message: string }>(response);
   return result.data;
 };
 
@@ -158,10 +122,9 @@ export const toggleStaffStatus = async (id: number, data?: ToggleStatusData): Pr
  * Delete staff account with cascading cleanup
  */
 export const deleteStaffAccount = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/api/staff/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
+  const response = await apiFetch(`/api/staff/${id}`, {
+    method: "DELETE",
   });
 
-  await handleResponse<{ success: boolean; message: string }>(response);
+  await handleApiResponse<{ success: boolean; message: string }>(response);
 };

@@ -12,53 +12,57 @@ export const login = async (req: Request, res: Response) => {
     }
 
     try {
-        const staff = await prisma.staffAccount.findUnique({
-            where: { username }
+        const cleanUsername = username.trim();
+
+        const staff = await prisma.staffAccount.findFirst({
+            where: {
+                username: {
+                    equals: cleanUsername,
+                    mode: 'insensitive'
+                }
+            }
         });
 
         if (!staff) {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        // Verify password against stored passwordHash
-        const isValidPassword = await bcrypt.compare(password, staff.passwordHash);
+        const isValidPassword = await bcrypt.compare(password.trim(), staff.passwordHash);
         if (!isValidPassword) {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        if (!staff.isActive) {
+        if (staff.isActive === false) {
             return res.status(403).json({ error: 'Account is deactivated. Contact administrator.' });
         }
 
-        // Issue JWT token containing Staff ID and Role
         const token = jwt.sign(
             { 
                 id: staff.id.toString(), 
                 username: staff.username, 
-                role: staff.role.toUpperCase() // Ensure uppercase for consistency
+                role: (staff.role || 'ADMIN').toUpperCase() 
             },
             process.env.JWT_SECRET || 'amanuel_hospital_secure_jwt_secret_2026_key',
             { expiresIn: '24h' }
         );
 
-        // Update lastLogin timestamp
         await prisma.staffAccount.update({
             where: { id: staff.id },
             data: { lastLogin: new Date(), isOnline: true }
-        });
+        }).catch(err => console.error('Non-critical lastLogin update error:', err.message));
 
         return res.json({
             success: true,
             token,
             user: {
-                id: staff.id.toString(), // Convert BigInt to string for JSON serialization
+                id: staff.id.toString(),
                 username: staff.username,
                 role: staff.role,
-                displayName: staff.displayName
+                displayName: staff.displayName || staff.username
             }
         });
     } catch (error: any) {
-        console.error('Login controller error:', error);
+        console.error('Login controller fatal error:', error);
         return res.status(500).json({ error: error.message || 'Internal server error during login' });
     }
 };
@@ -69,8 +73,8 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
             return res.status(401).json({ success: false, message: 'Not authenticated.' });
         }
 
-        const staff = await prisma.staffAccount.findUnique({
-            where: { id: BigInt(req.user.id) },
+        const staff = await prisma.staffAccount.findFirst({
+            where: { username: req.user.username },
             select: {
                 id: true,
                 username: true,
@@ -86,7 +90,13 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ success: false, message: 'Staff account not found.' });
         }
 
-        return res.json({ success: true, user: staff });
+        return res.json({ 
+            success: true, 
+            user: {
+                ...staff,
+                id: staff.id.toString()
+            } 
+        });
     } catch (error: any) {
         return res.status(500).json({ success: false, message: error.message });
     }

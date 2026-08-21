@@ -33,6 +33,17 @@ export function handleUnauthorized(): void {
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const token = getAuthToken();
+  
+  // Debug logging for authentication
+  if (path.includes('/staff') && !path.includes('/login')) {
+    console.log('[API Request]', {
+      path,
+      hasToken: !!token,
+      tokenPrefix: token ? token.substring(0, 20) + '...' : 'none'
+    });
+  }
+  
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
@@ -52,6 +63,15 @@ export async function handleApiResponse<T>(response: Response): Promise<T> {
   const data = await response.json();
 
   if (!response.ok) {
+    // Enhanced error logging for debugging
+    console.error('[API Error]', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      error: data.error || data.message,
+      data
+    });
+    
     throw new Error(data.error || data.message || "Request failed");
   }
 
